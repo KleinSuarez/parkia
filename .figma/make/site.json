@@ -1,0 +1,11 @@
+{
+  "title": "Parkia — Sistema Inteligente de Gestión de Parqueaderos",
+  "description": "Streamline parking management with real-time availability, user profiles, and administrative dashboards for efficient operations and enhanced driver experience.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
