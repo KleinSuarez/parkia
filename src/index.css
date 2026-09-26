@@ -946,6 +946,453 @@ body{margin:0;min-width:320px;min-height:100vh}button,input,select{font:inherit}
   to { border-color: #86efac; }
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   MOBILE NATIVE EXPERIENCE FOR DRIVERS (ADR-003 & SPEC-002)
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Contenedor exterior para presentación de escritorio */
+.mobile-device-viewport {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background: radial-gradient(circle at 50% 20%, #153c39 0%, #0d2826 60%, #071716 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.mobile-device-viewport::before {
+  content: "";
+  position: absolute;
+  width: 800px;
+  height: 800px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(22, 157, 179, 0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* Barra superior de herramientas del evaluador */
+.mobile-evaluator-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(412px, 100%);
+  margin-bottom: 14px;
+  padding: 0 6px;
+  z-index: 10;
+}
+.mobile-evaluator-bar strong {
+  color: #d7ede9;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: -0.2px;
+}
+.evaluator-actions {
+  display: flex;
+  gap: 8px;
+}
+.evaluator-btn {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 180ms ease;
+}
+.evaluator-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* Marco del Teléfono Inteligente */
+.phone-device {
+  width: 412px;
+  height: 860px;
+  background: #000000;
+  border-radius: 50px;
+  box-shadow: 0 30px 100px rgba(0, 15, 14, 0.65), 0 0 0 10px #182422, 0 0 0 12px #283a37;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  z-index: 5;
+  transition: all 300ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Modo pantalla completa en PC */
+.mobile-device-viewport.fullscreen {
+  padding: 0;
+  background: #f5f7f6;
+}
+.mobile-device-viewport.fullscreen .mobile-evaluator-bar {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  width: auto;
+  z-index: 120;
+}
+.mobile-device-viewport.fullscreen .phone-device {
+  width: 100%;
+  height: 100vh;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* Barra de Estado Nativa (Status Bar) */
+.phone-status-bar {
+  height: 44px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  color: #1a2926;
+  font-size: 12px;
+  font-weight: 700;
+  position: relative;
+  z-index: 30;
+  border-bottom: 1px solid #f0f4f3;
+  flex-shrink: 0;
+}
+.phone-island {
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  transform: translateX(-50%);
+  width: 110px;
+  height: 28px;
+  background: #000000;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 10px;
+}
+.island-sensor {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #111a19;
+}
+.phone-status-icons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+
+/* Pantalla del Teléfono (Contenedor Scrollable) */
+.phone-screen {
+  flex: 1;
+  background: #f5f7f6;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 74px; /* Espacio para la Bottom Nav fija */
+}
+
+/* Header Móvil del Conductor */
+.mobile-header {
+  padding: 14px 18px 12px;
+  background: #ffffff;
+  border-bottom: 1px solid #e7ecea;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 25;
+}
+.mobile-header-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mobile-header-user small {
+  display: block;
+  font-size: 10px;
+  color: #7b8b88;
+}
+.mobile-header-user strong {
+  font-size: 14px;
+  color: #142523;
+  letter-spacing: -0.2px;
+}
+
+/* Selector Rápido de Vehículo Activo en Header */
+.vehicle-selector-pill {
+  background: #eef6f4;
+  border: 1px solid #c8e0db;
+  color: #0d766e;
+  padding: 6px 10px;
+  border-radius: 30px;
+  font-size: 11px;
+  font-weight: 750;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: transform 150ms ease;
+}
+.vehicle-selector-pill:active {
+  transform: scale(0.96);
+}
+
+/* Contenido de Página Móvil */
+.mobile-page-content {
+  padding: 16px 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Tarjeta Móvil de Sesión Activa (Glanceable Driving Widget) */
+.mobile-session-card {
+  background: #ffffff;
+  border-radius: 18px;
+  border: 1px solid #dce5e2;
+  box-shadow: 0 8px 24px rgba(0, 24, 21, 0.08);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.mobile-session-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.mobile-plate-badge {
+  font-size: 20px;
+  font-weight: 800;
+  color: #142523;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.5px;
+}
+.mobile-session-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  background: #f7faf9;
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.mobile-session-metric span {
+  font-size: 10px;
+  color: #788986;
+  display: block;
+}
+.mobile-session-metric strong {
+  font-size: 17px;
+  color: #152624;
+  margin-top: 3px;
+  display: block;
+}
+.mobile-session-metric.cost strong {
+  color: #0d766e;
+  font-size: 20px;
+}
+
+/* Atajos rápidos en cuadrícula móvil */
+.mobile-quick-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.mobile-action-card {
+  background: #ffffff;
+  border: 1px solid #e1e8e6;
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 150ms ease;
+}
+.mobile-action-card:active {
+  transform: scale(0.96);
+}
+.mobile-action-card strong {
+  font-size: 13px;
+  color: #1e302e;
+}
+.mobile-action-card small {
+  font-size: 10px;
+  color: #7e8f8c;
+}
+
+/* Barra de Navegación Inferior (Thumb-Zone Bottom Navigation) */
+.mobile-bottom-nav {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 66px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-top: 1px solid #e2e8e6;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  z-index: 40;
+}
+.mobile-nav-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border: 0;
+  background: transparent;
+  color: #728480;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: color 150ms ease, transform 150ms ease;
+}
+.mobile-nav-btn:active {
+  transform: scale(0.92);
+}
+.mobile-nav-btn.active {
+  color: #0d766e;
+}
+.mobile-nav-btn.active svg {
+  stroke: #0d766e;
+  transform: translateY(-1px);
+}
+.mobile-nav-dot {
+  width: 4px;
+  height: 4px;
+  background: #0d766e;
+  border-radius: 50%;
+  margin-top: 1px;
+}
+
+/* Indicador de inicio inferior (Home Indicator nativo) */
+.phone-home-bar {
+  height: 18px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-top: 1px solid #f0f4f3;
+  z-index: 45;
+}
+.home-pill {
+  width: 130px;
+  height: 4px;
+  border-radius: 2px;
+  background: #b0bfbc;
+}
+
+/* ── HOJAS DESLIZABLES INFERIORES (BOTTOM SHEETS) ── */
+.bottom-sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 18, 16, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  animation: sheet-dim-in 250ms ease-out both;
+}
+@keyframes sheet-dim-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.bottom-sheet {
+  background: #ffffff;
+  border-radius: 24px 24px 0 0;
+  padding: 12px 20px 30px;
+  box-shadow: 0 -12px 40px rgba(0, 20, 18, 0.28);
+  max-height: 85%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: sheet-slide-up 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes sheet-slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.sheet-handle-bar {
+  width: 44px;
+  height: 5px;
+  border-radius: 3px;
+  background: #cfdad7;
+  margin: 0 auto 4px;
+}
+.sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.sheet-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #142523;
+}
+.sheet-cta-btn {
+  height: 54px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 750;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  cursor: pointer;
+  transition: transform 150ms ease;
+}
+.sheet-cta-btn:active {
+  transform: scale(0.98);
+}
+
+/* Adaptación real para celulares físicos */
+@media (max-width: 768px) {
+  .mobile-device-viewport {
+    padding: 0;
+    background: #f5f7f6;
+  }
+  .mobile-evaluator-bar {
+    display: none;
+  }
+  .phone-device {
+    width: 100%;
+    height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .phone-screen {
+    padding-bottom: calc(66px + env(safe-area-inset-bottom, 10px));
+  }
+  .mobile-bottom-nav {
+    padding-bottom: env(safe-area-inset-bottom, 6px);
+    height: calc(66px + env(safe-area-inset-bottom, 6px));
+  }
+}
+
+
 
 
 

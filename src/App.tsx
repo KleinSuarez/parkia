@@ -3,6 +3,7 @@ import { useParkiaStore, ParkingSpot, ParkingHistoryItem } from "./store/parkiaS
 import { Icon, Badge, IconName } from "./components/Icon";
 import { AuthScreen } from "./components/AuthScreen";
 import { PaymentModal } from "./components/PaymentModal";
+import { MobileDriverApp } from "./components/MobileDriverApp";
 
 // ── COMPONENTES REUTILIZABLES DE ANIMACIÓN Y ACCESIBILIDAD ──
 function AnimatedValue({
@@ -2184,7 +2185,7 @@ const adminNav = [
 
 export default function App() {
   const [state, actions] = useParkiaStore();
-  const [page, setPage] = useState<string>("inicio");
+  const [adminPage, setAdminPage] = useState<string>("dashboard");
 
   // Si no hay usuario autenticado, renderizar la pantalla de Login y Registro (Flujo A0)
   if (!state.currentUser) {
@@ -2193,56 +2194,35 @@ export default function App() {
 
   const role = state.currentUser.role;
 
-  const navigateTo = (nextPage: string) => {
-    if (nextPage === page) return;
-    const pagesOrder = [
-      "inicio",
-      "estacionamiento",
-      "mapa",
-      "vehiculos",
-      "historial",
-      "dashboard",
-      "talanqueras",
-      "reportes",
-      "configuracion",
-    ];
-    const prevIndex = pagesOrder.indexOf(page);
-    const nextIndex = pagesOrder.indexOf(nextPage);
-    const direction = nextIndex >= prevIndex ? "forward" : "backward";
-
-    if ("startViewTransition" in document) {
-      document.documentElement.setAttribute("data-nav-dir", direction);
-      (document as any)
-        .startViewTransition(() => {
-          setPage(nextPage);
-        })
-        .finished.finally(() => {
-          document.documentElement.removeAttribute("data-nav-dir");
-        });
-    } else {
-      setPage(nextPage);
-    }
-  };
-
   const switchRole = (newRole: "driver" | "admin") => {
-    const nextPage = newRole === "driver" ? "inicio" : "dashboard";
     actions.loginDemo(newRole);
-    if ("startViewTransition" in document) {
-      (document as any).startViewTransition(() => {
-        setPage(nextPage);
-      });
-    } else {
-      setPage(nextPage);
-    }
   };
 
-  const content: Record<string, React.ReactNode> = {
-    inicio: <Home go={navigateTo} />,
-    estacionamiento: <ActiveParkingDashboard go={navigateTo} />,
-    mapa: <AvailabilityMap />,
-    vehiculos: <Vehicles />,
-    historial: <History />,
-    dashboard: <AdminDashboard go={navigateTo} />,
+  // ── APARTADO 1: CONDUCTORES (EXPERIENCIA MÓVIL NATIVA ERGONÓMICA) ──
+  if (role === "driver") {
+    return (
+      <>
+        <MobileDriverApp onSwitchToAdmin={() => switchRole("admin")} />
+        {/* Botón Flotante de Demostración Reactiva */}
+        <aside className="floating-demo-bar" aria-label="Controles de demostración">
+          <span className="live-dot" />
+          <span>Demo Activa</span>
+          <button
+            type="button"
+            className="floating-reset-btn"
+            onClick={() => actions.resetDemo()}
+            title="Restablecer datos iniciales de fábrica"
+          >
+            <Icon name="refresh" size={13} /> Reiniciar datos demo
+          </button>
+        </aside>
+      </>
+    );
+  }
+
+  // ── APARTADO 2: OPERARIOS (CONSOLA DE MANDO Y CONTROL DE ESCRITORIO) ──
+  const adminContent: Record<string, React.ReactNode> = {
+    dashboard: <AdminDashboard go={setAdminPage} />,
     talanqueras: <Gates />,
     reportes: <Reports />,
     configuracion: <Settings />,
@@ -2250,109 +2230,74 @@ export default function App() {
 
   return (
     <div className={`app-shell ${role}`}>
-      {role === "driver" ? (
-        <header className="topbar">
-          <button className="brand" onClick={() => navigateTo("inicio")}>
-            <span>P</span>
-            <strong>Parkia</strong>
-          </button>
-          <nav>
-            {driverNav.map((n) => (
-              <button
-                key={n.id}
-                className={page === n.id ? "active" : ""}
-                onClick={() => navigateTo(n.id)}
-              >
-                <Icon name={n.icon} />
-                {n.label}
-              </button>
-            ))}
-          </nav>
-          <div className="role-actions">
-            <button className="role-switch" onClick={() => switchRole("admin")}>
-              <Icon name="shield" size={16} /> Vista operador
-            </button>
-            <div className="user-menu">
-              <span className="avatar small">{state.currentUser.avatarText}</span>
-              <span>
-                <strong>{state.currentUser.name}</strong>
-                <small>Conductor</small>
-              </span>
-              <button
-                className="icon-btn"
-                onClick={() => actions.logout()}
-                title="Cerrar sesión"
-                style={{ width: 28, height: 28, marginLeft: 4 }}
-              >
-                <Icon name="logout" size={14} />
-              </button>
+      <aside className="sidebar">
+        <button className="brand dark" onClick={() => setAdminPage("dashboard")}>
+          <span>P</span>
+          <strong>Parkia</strong>
+        </button>
+        <div className="site-select">
+          <span>SEDE ACTUAL</span>
+          <button>
+            <i>
+              <Icon name="grid" size={17} />
+            </i>
+            <div>
+              <strong>Parking Central</strong>
+              <small>Calle 93 · Bogotá</small>
             </div>
-          </div>
-        </header>
-      ) : (
-        <aside className="sidebar">
-          <button className="brand dark" onClick={() => navigateTo("dashboard")}>
-            <span>P</span>
-            <strong>Parkia</strong>
+            <Icon name="chevron" size={15} />
           </button>
-          <div className="site-select">
-            <span>SEDE ACTUAL</span>
-            <button>
-              <i>
-                <Icon name="grid" size={17} />
-              </i>
-              <div>
-                <strong>Parking Central</strong>
-                <small>Calle 93 · Bogotá</small>
-              </div>
-              <Icon name="chevron" size={15} />
+        </div>
+        <nav>
+          {adminNav.map((n) => (
+            <button
+              key={n.id}
+              className={adminPage === n.id ? "active" : ""}
+              onClick={() => setAdminPage(n.id)}
+            >
+              <Icon name={n.icon} />
+              {n.label}
+              {n.id === "talanqueras" && (
+                <Badge tone="critical">
+                  {state.gates.filter((g) => g.connection === "offline").length || 1}
+                </Badge>
+              )}
+            </button>
+          ))}
+        </nav>
+        <div className="sidebar-bottom">
+          <button onClick={() => switchRole("driver")}>
+            <Icon name="logout" />
+            <span>
+              <strong>App del Conductor</strong>
+              <small>Abrir experiencia móvil</small>
+            </span>
+          </button>
+          <div className="operator">
+            <span className="avatar small">{state.currentUser.avatarText}</span>
+            <span>
+              <strong>{state.currentUser.name}</strong>
+              <small>{state.currentUser.shift || "Turno AM"}</small>
+            </span>
+            <button
+              className="icon-btn"
+              onClick={() => actions.logout()}
+              title="Cerrar sesión"
+              style={{
+                width: 26,
+                height: 26,
+                background: "transparent",
+                color: "#a5b9b5",
+                border: 0,
+              }}
+            >
+              <Icon name="logout" size={15} />
             </button>
           </div>
-          <nav>
-            {adminNav.map((n) => (
-              <button
-                key={n.id}
-                className={page === n.id ? "active" : ""}
-                onClick={() => navigateTo(n.id)}
-              >
-                <Icon name={n.icon} />
-                {n.label}
-                {n.id === "talanqueras" && (
-                  <Badge tone="critical">
-                    {state.gates.filter((g) => g.connection === "offline").length || 1}
-                  </Badge>
-                )}
-              </button>
-            ))}
-          </nav>
-          <div className="sidebar-bottom">
-            <button onClick={() => switchRole("driver")}>
-              <Icon name="logout" />
-              <span>
-                <strong>Volver al portal</strong>
-                <small>Vista del conductor</small>
-              </span>
-            </button>
-            <div className="operator">
-              <span className="avatar small">{state.currentUser.avatarText}</span>
-              <span>
-                <strong>{state.currentUser.name}</strong>
-                <small>{state.currentUser.shift || "Turno AM"}</small>
-              </span>
-              <button
-                className="icon-btn"
-                onClick={() => actions.logout()}
-                title="Cerrar sesión"
-                style={{ width: 26, height: 26, background: "transparent", color: "#a5b9b5", border: 0 }}
-              >
-                <Icon name="logout" size={15} />
-              </button>
-            </div>
-          </div>
-        </aside>
-      )}
+        </div>
+      </aside>
 
-      <div className="content">{content[page] || content[role === "driver" ? "inicio" : "dashboard"]}</div>
+      <div className="content">{adminContent[adminPage] || adminContent.dashboard}</div>
 
       {/* Botón Flotante de Demostración Reactiva */}
       <aside className="floating-demo-bar" aria-label="Controles de demostración">
@@ -2370,3 +2315,4 @@ export default function App() {
     </div>
   );
 }
+
