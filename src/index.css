@@ -45,6 +45,50 @@ body{margin:0;min-width:320px;min-height:100vh}button,input,select{font:inherit}
 .settings-tabs{border-bottom:1px solid #dbe3e0;display:flex;gap:26px;margin-bottom:20px}.settings-tabs button{border:0;background:transparent;padding:11px 2px;color:#788582;font-size:11px;font-weight:700;position:relative}.settings-tabs button.active{color:#0d766e}.settings-tabs button.active:after{content:"";position:absolute;height:2px;background:#0d766e;left:0;right:0;bottom:-1px}.settings-layout{display:grid;grid-template-columns:1fr 260px;gap:18px}.settings-card,.audit-note{background:white;border:1px solid #e0e6e4;border-radius:14px;padding:22px}.settings-card>div:first-child h3{margin:0;font-size:17px}.settings-card>div:first-child p{font-size:10px;color:#84918e}.tariff-head,.tariff-row{display:grid;grid-template-columns:1.3fr repeat(3,1fr);gap:12px;align-items:center}.tariff-head{font-size:8px;text-transform:uppercase;color:#83908d;letter-spacing:.5px;margin-top:25px;padding:0 7px}.tariff-row{padding:12px 7px;border-bottom:1px solid #e8eceb}.tariff-row>span{display:flex;align-items:center;gap:9px;font-size:10px}.tariff-icon{width:30px;height:30px;border-radius:7px;background:#e5f1ef;color:#0d766e;display:grid!important;place-items:center}.tariff-row input{width:100%;height:35px;border:1px solid #dce3e1;border-radius:7px;padding:0 9px;font-size:10px;color:#354542}.settings-footer{display:flex;justify-content:space-between;align-items:center;margin-top:18px}.settings-footer>span{display:flex;gap:6px;color:#75827f;font-size:9px}.audit-note>svg{color:#0d766e}.audit-note h3{font-size:15px;margin:16px 0 6px}.audit-note>p{font-size:10px;line-height:1.5;color:#788582}.audit-note>div{display:flex;flex-direction:column;background:#f5f8f7;border-radius:8px;padding:13px;margin:17px 0}.audit-note span,.audit-note small{font-size:8px;color:#84918e}.audit-note strong{font-size:10px;margin:4px 0}.toast{position:fixed;right:28px;bottom:25px;width:300px;background:#153e3b;color:white;padding:13px;border-radius:10px;display:flex;align-items:center;gap:10px;box-shadow:0 15px 35px #102d2944;z-index:50}.toast>span{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:#47ad9d}.toast div{display:flex;flex-direction:column;flex:1}.toast strong{font-size:10px}.toast small{font-size:8px;color:#abc5c0;margin-top:2px}.toast button{border:0;background:none;color:white}
 .modal-backdrop{position:fixed;inset:0;background:#0c201e99;z-index:100;display:grid;place-items:center;padding:20px}.modal{background:white;border-radius:15px;width:min(510px,100%);box-shadow:0 25px 70px #00110f55;padding:22px}.modal-head{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e8eceb;padding-bottom:14px;margin-bottom:19px}.modal-head h2{font-size:19px;margin:0}.modal-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:22px}.modal-spot{text-align:center}.modal-spot>span{width:55px;height:55px;border-radius:50%;background:#e1f2ee;color:#0d766e;display:grid;place-items:center;margin:0 auto}.modal-spot h3{margin:13px 0 5px}.modal-spot p{font-size:11px;color:#75837f;line-height:1.5;max-width:350px;margin:0 auto}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}.modal label{font-size:10px;color:#62706d;font-weight:650;display:flex;flex-direction:column;gap:6px}.modal input,.modal select{height:39px;border:1px solid #d9e1df;border-radius:7px;padding:0 10px;color:#374744;background:#fff}.payment-summary{background:#f0f7f5;border-radius:10px;padding:16px;margin-bottom:15px}.payment-summary div{display:flex;justify-content:space-between;align-items:center}.payment-summary span{font-size:10px}.payment-summary strong{font-size:23px;color:#0d766e}.payment-summary p{font-size:9px;color:#81908c;margin:5px 0 0}.payment-method{border:1px solid #bcd8d4!important;border-radius:9px;padding:12px;display:flex!important;flex-direction:row!important;align-items:center;gap:10px!important}.payment-method>span:nth-of-type(2){display:flex;flex:1;flex-direction:column}.payment-method small{font-size:8px;color:#84918e}.card-symbol{width:35px;height:29px;background:#edf2f1;border-radius:5px;display:grid;place-items:center}.critical-message{display:flex;gap:12px;background:#fff1ef;padding:13px;border-radius:9px;margin-bottom:16px}.critical-message>span{color:#b83e37}.critical-message strong{font-size:11px}.critical-message p{font-size:9px;color:#755b58;line-height:1.45;margin:4px 0 0}
 
+/* ── Active Parking Dashboard (Seguimiento #1) ── */
+.apd-variants { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; }
+.apd-variant-btn { border: 1px solid #dce4e1; background: #f9fbfa; border-radius: 8px; padding: 7px 18px; font-size: 11px; font-weight: 700; color: #52615f; transition: background 200ms var(--ease-in-ui), color 200ms var(--ease-in-ui), border-color 200ms var(--ease-in-ui); cursor: pointer; }
+.apd-variant-btn--on { background: #0d766e; border-color: #0d766e; color: #fff; }
+.apd-variant-hint { font-size: 10px; color: #9aa5a2; margin-left: 6px; }
+.apd-card { background: white; border: 1px solid #e2e8e6; border-radius: 14px; padding: 22px; display: grid; grid-template-columns: 1.5fr repeat(3, 1fr) auto; align-items: center; gap: 25px; transition: box-shadow 500ms ease-in, transform 300ms var(--ease-in-ui); }
+.apd-card--b { box-shadow: 0 4px 20px #0d766e18; }
+.apd-vehicle { display: flex; align-items: center; gap: 15px; }
+.apd-vehicle h3 { margin: 7px 0 1px; font-size: 18px; letter-spacing: 0.3px; }
+.apd-vehicle p { margin: 0; color: #82908d; font-size: 10px; }
+.apd-plate { font-variant-numeric: tabular-nums; }
+.apd-icon-wrap { position: relative; display: inline-block; }
+.apd-icon-wrap::after { content: ""; position: absolute; inset: -9px; border-radius: 21px; border: 2px solid #0d766e; opacity: 0; transform: scale(0.84); transition: opacity 500ms ease-in, transform 500ms ease-in, border-color 500ms ease-in; }
+.apd-icon-wrap--ring::after { opacity: 0.5; transform: scale(1); }
+.apd-val { font-size: 15px; margin: 5px 0; display: block; animation: apd-val-in 500ms ease-out both; }
+.session-stat.total .apd-val { color: #0d766e; font-size: 18px; }
+@keyframes apd-val-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+.apd-history { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.apd-history-row { background: white; border: 1px solid #e2e8e6; border-radius: 12px; padding: 16px 20px; display: grid; grid-template-columns: 1.8fr 1fr 1fr auto; align-items: center; gap: 20px; }
+.apd-hr-vehicle { display: flex; align-items: center; gap: 12px; }
+.apd-hr-vehicle div { display: flex; flex-direction: column; }
+.apd-hr-vehicle small { color: #82908d; font-size: 10px; margin-top: 3px; }
+.apd-hr-stat { display: flex; flex-direction: column; }
+.apd-hr-stat span { font-size: 9px; color: #7e8b88; }
+.apd-hr-stat strong { font-size: 13px; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.apd-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); z-index: 100; display: grid; place-items: center; padding: 20px; }
+.apd-modal { animation: apd-modal-in 300ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes apd-modal-in { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+.apd-detail { display: flex; flex-direction: column; gap: 4px; padding: 12px; background: #f7f9f8; border-radius: 9px; }
+.apd-detail span { font-size: 9px; color: #7a8885; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; }
+.apd-detail strong { font-size: 12px; color: #354441; margin-top: 2px; }
+
+.tabnum { font-variant-numeric: tabular-nums; }
+.plate-icon--animated { position: relative; }
+.session-pulse { position: absolute; inset: -6px; border-radius: 18px; border: 2px solid #0d766e44; animation: session-ring 2s cubic-bezier(0.4, 0, 0.2, 1) infinite; pointer-events: none; }
+@keyframes session-ring { 0% { opacity: 0.85; transform: scale(1); } 60% { opacity: 0.2; transform: scale(1.12); } 100% { opacity: 0.85; transform: scale(1); } }
+
+@media (max-width: 1100px) {
+  .apd-card { grid-template-columns: 1.5fr 1fr 1fr; }
+  .apd-card .session-stat:last-of-type, .apd-card > button { display: none; }
+  .apd-history-row { grid-template-columns: 1.6fr 1fr auto; }
+  .apd-hr-stat:last-of-type { display: none; }
+}
+
 /* ── Payment modal open/close ── */
 @keyframes pay-backdrop-in  { from { opacity: 0 } to { opacity: 1 } }
 @keyframes pay-backdrop-out { from { opacity: 1 } to { opacity: 0 } }

@@ -112,6 +112,32 @@ function OccupancyRing({ pct }: { pct: number }) {
   );
 }
 
+const costFmt = new Intl.NumberFormat("es-CO", { style: "decimal", minimumFractionDigits: 0 });
+
+function useAnimatedValue(target: number, duration = 500) {
+  const [value, setValue] = useState(target);
+  const prev = useRef(target);
+  const rafRef = useRef<number>(0);
+
+  useEffect(() => {
+    const from = prev.current;
+    const to = target;
+    if (from === to) return;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const t = Math.min((now - start) / duration, 1);
+      const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+      setValue(from + (to - from) * ease);
+      if (t < 1) rafRef.current = requestAnimationFrame(tick);
+      else { setValue(to); prev.current = to; }
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [target, duration]);
+
+  return value;
+}
+
 type IconName =
   | "home" | "map" | "car" | "clock" | "grid" | "gate" | "report"
   | "settings" | "bell" | "search" | "arrow" | "check" | "close"
@@ -156,6 +182,63 @@ function Header({ title, eyebrow }: { title: string; eyebrow: string }) {
   return <div className="page-head"><div><p className="eyebrow">{eyebrow}</p><h1>{title}</h1></div><div className="head-actions"><button className="icon-btn" aria-label="Notificaciones"><Icon name="bell"/><span className="notification-dot"/></button><div className="avatar">CM</div></div></div>;
 }
 
+function ActiveSession({ go }: { go: (page: string) => void }) {
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((n) => n + 1), 8000);
+    return () => clearInterval(id);
+  }, []);
+
+  const targetCost = 8500 + tick * 100;
+  const baseMinutes = 138 + tick;
+  const targetMinutes = baseMinutes;
+
+  const animCost = useAnimatedValue(targetCost);
+  const animMinutes = useAnimatedValue(targetMinutes);
+
+  const displayCost = `$ ${costFmt.format(Math.round(animCost))}`;
+  const h = Math.floor(Math.round(animMinutes) / 60);
+  const m = Math.round(animMinutes) % 60;
+  const displayTime = `${String(h).padStart(2, "0")} h ${String(m).padStart(2, "0")} min`;
+
+  const announcedCost = `$ ${costFmt.format(targetCost)}`;
+  const announcedTime = `${String(Math.floor(targetMinutes / 60)).padStart(2, "0")} h ${String(targetMinutes % 60).padStart(2, "0")} min`;
+
+  return (
+    <section className="active-session">
+      <div className="plate-block">
+        <div className="plate-icon plate-icon--animated">
+          <Icon name="car" size={28}/>
+          <span className="session-pulse" aria-hidden="true"/>
+        </div>
+        <div>
+          <Badge tone="green">Sesión activa</Badge>
+          <h3>JHT · 482</h3>
+          <p>Chevrolet Tracker · Gris</p>
+        </div>
+      </div>
+      <div className="session-stat">
+        <span>Entrada</span>
+        <strong>08:42 a. m.</strong>
+        <small>Acceso Norte</small>
+      </div>
+      <div className="session-stat">
+        <span>Tiempo transcurrido</span>
+        <strong className="tabnum" aria-hidden="true">{displayTime}</strong>
+        <span className="sr-only" aria-live="polite" aria-atomic="true">{announcedTime}</span>
+        <small>Tarifa por minuto</small>
+      </div>
+      <div className="session-stat total">
+        <span>Total estimado</span>
+        <strong className="tabnum" style={{ color: "#0d766e" }} aria-hidden="true">{displayCost}</strong>
+        <span className="sr-only" aria-live="polite" aria-atomic="true">{announcedCost}</span>
+        <small>Actualizado ahora</small>
+      </div>
+      <button className="secondary" onClick={() => go("estacionamiento")}>Ver detalle</button>
+    </section>
+  );
+}
+
 function Home({ go }: { go: (page: string) => void }) {
   return <main className="page">
     <Header eyebrow="Jueves, 12 de junio" title="Buenos días, Carlos"/>
@@ -166,11 +249,7 @@ function Home({ go }: { go: (page: string) => void }) {
       <div className="hero-visual"><div className="orbit o1"/><div className="orbit o2"/><div className="parking-mark">P<span>ARK</span></div><div className="availability-card"><span>Zona recomendada</span><strong>Piso 2 · Zona B</strong><small>42 espacios libres</small></div></div>
     </section>
     <div className="section-title"><div><p className="eyebrow">EN CURSO</p><h3>Tu estacionamiento activo</h3></div><button className="text-btn" onClick={() => go("historial")}>Ver historial <Icon name="arrow" size={16}/></button></div>
-    <section className="active-session">
-      <div className="plate-block"><div className="plate-icon"><Icon name="car" size={28}/></div><div><Badge tone="green">Sesión activa</Badge><h3>JHT · 482</h3><p>Chevrolet Tracker · Gris</p></div></div>
-      <div className="session-stat"><span>Entrada</span><strong>08:42 a. m.</strong><small>Acceso Norte</small></div><div className="session-stat"><span>Tiempo transcurrido</span><strong>02 h 18 min</strong><small>Tarifa por minuto</small></div><div className="session-stat total"><span>Total estimado</span><strong style={{ color: "#0d766e" }}><AnimatedValue value={8600} format="currency"/></strong><small>Actualizado ahora</small></div>
-      <button className="secondary" onClick={() => go("historial")}>Ver detalle</button>
-    </section>
+    <ActiveSession go={go}/>
     <section className="quick-grid">
       <button onClick={() => go("mapa")} style={{ '--i': 0 } as React.CSSProperties}><span className="quick-icon teal"><Icon name="map"/></span><div><strong>Explorar mapa</strong><small>Disponibilidad por piso y zona</small></div><Icon name="chevron"/></button>
       <button onClick={() => go("vehiculos")} style={{ '--i': 1 } as React.CSSProperties}><span className="quick-icon blue"><Icon name="car"/></span><div><strong>Mis vehículos</strong><small>2 vehículos registrados</small></div><Icon name="chevron"/></button>
@@ -329,96 +408,249 @@ function History() {
   </main>;
 }
 
-const BAR_DATA = [22, 35, 58, 72, 83, 77, 68, 73];
-const BAR_LABELS = ["6a", "8a", "10a", "12p", "2p", "4p", "6p", "Ahora"];
+const APD_HISTORY = [
+  { plate: "JHT · 492", entry: "Hoy · 08:42 a. m.", duration: "2 h 18 min", cost: "$ 8.600", tone: "active", label: "Activa" },
+  { plate: "KLP · 091", entry: "Ayer · 14:10 p. m.", duration: "1 h 44 min", cost: "$ 7.200", tone: "paid", label: "Pagada" },
+  { plate: "JHT · 492", entry: "10 jun · 09:30 a. m.", duration: "2 h 45 min", cost: "$ 10.725", tone: "paid", label: "Pagada" },
+  { plate: "KLP · 091", entry: "09 jun · 16:00 p. m.", duration: "1 h 12 min", cost: "$ 4.680", tone: "paid", label: "Pagada" },
+] as const;
 
-function AnimatedChart() {
-  const [heights, setHeights] = useState<number[]>(BAR_DATA.map(() => 0));
-  const fmt = new Intl.NumberFormat("es-CO", { maximumFractionDigits: 0 });
+const APD_DETAILS = [
+  ["Placa", "JHT · 492"], ["Vehículo", "Chevrolet Tracker · Gris"],
+  ["Tipo", "Automóvil"], ["Acceso", "Entrada Norte"],
+  ["Tarifa", "$ 65 / min"], ["Tope diario", "$ 42.000"],
+] as const;
+
+function ActiveParkingDashboard({ go }: { go: (page: string) => void }) {
+  const [variant, setVariant] = useState<"A" | "B">("A");
+  const [showModal, setShowModal] = useState(false);
+  const [listReady, setListReady] = useState(false);
 
   useEffect(() => {
-    const duration = 500;
-    const start = performance.now();
-    function ease(t: number) { return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; }
-    function tick(now: number) {
-      const t = Math.min((now - start) / duration, 1);
-      const e = ease(t);
-      setHeights(BAR_DATA.map((h) => Math.round(e * h)));
-      if (t < 1) requestAnimationFrame(tick);
-      else setHeights(BAR_DATA);
-    }
-    requestAnimationFrame(tick);
+    const id = requestAnimationFrame(() => setListReady(true));
+    return () => cancelAnimationFrame(id);
   }, []);
 
+  const vals = {
+    A: { time: "02 h 17 min", cost: "$ 8.500" },
+    B: { time: "02 h 18 min", cost: "$ 8.600" },
+  } as const;
+  const v = vals[variant];
+
   return (
-    <div className="chart">
-      <div className="y-labels">
-        {[100, 75, 50, 25, 0].map((v) => (
-          <span key={v} style={{ fontVariantNumeric: "tabular-nums" }}>{fmt.format(v)}%</span>
+    <main className="page">
+      <Header eyebrow="SESIÓN EN CURSO" title="Estacionamiento activo"/>
+
+      {/* Variant selector — simulates Smart Animate A→B */}
+      <div className="apd-variants">
+        {(["A", "B"] as const).map((s) => (
+          <button
+            key={s}
+            className={`apd-variant-btn${variant === s ? " apd-variant-btn--on" : ""}`}
+            onClick={() => setVariant(s)}
+          >
+            Estado {s}
+          </button>
         ))}
+        <span className="apd-variant-hint">Cambia entre estados para ver la transición animada</span>
       </div>
-      <div className="bars">
-        {BAR_DATA.map((_, i) => (
-          <div className="bar-group" key={i}>
-            <i style={{ height: `${heights[i]}%` }} className={i === 7 ? "now" : ""} />
-            <span>{BAR_LABELS[i]}</span>
+
+      {/* ── 1. Value Change Card ── */}
+      <section className={`apd-card${variant === "B" ? " apd-card--b" : ""}`}>
+        <div className="apd-vehicle">
+          <div className={`apd-icon-wrap${variant === "B" ? " apd-icon-wrap--ring" : ""}`}>
+            <div className="plate-icon">
+              <Icon name="car" size={28}/>
+            </div>
+          </div>
+          <div>
+            <Badge tone="green">Sesión activa</Badge>
+            <h3 className="apd-plate">JHT · 492</h3>
+            <p>Chevrolet Tracker · Gris</p>
+          </div>
+        </div>
+
+        <div className="session-stat">
+          <span>Entrada</span>
+          <strong>08:42 a. m.</strong>
+          <small>Acceso Norte</small>
+        </div>
+
+        <div className="session-stat">
+          <span>Tiempo transcurrido</span>
+          <strong key={`t-${variant}`} className="tabnum apd-val">{v.time}</strong>
+          <small>Tarifa por minuto</small>
+        </div>
+
+        <div className="session-stat total">
+          <span>Total estimado</span>
+          <strong key={`c-${variant}`} className="tabnum apd-val">{v.cost}</strong>
+          <small>Actualizado ahora</small>
+        </div>
+
+        <button className="secondary" onClick={() => setShowModal(true)}>Ver detalle</button>
+      </section>
+
+      {/* ── 2. Staggered History List ── */}
+      <div className="section-title" style={{ marginTop: 36 }}>
+        <div><p className="eyebrow">HISTORIAL</p><h3>Historial reciente</h3></div>
+        <button className="text-btn" onClick={() => go("historial")}>Ver todo <Icon name="arrow" size={16}/></button>
+      </div>
+
+      <div
+        className="apd-history"
+        aria-live="polite"
+        aria-atomic="true"
+        aria-label={listReady ? APD_HISTORY.map(r => `${r.plate} ${r.duration} ${r.cost}`).join(". ") : undefined}
+      >
+        {APD_HISTORY.map((row, i) => (
+          <div
+            key={i}
+            className="apd-history-row"
+            style={{
+              opacity: listReady ? 1 : 0,
+              transform: listReady ? "translateY(0)" : "translateY(16px)",
+              transition: `opacity 400ms ease-out ${i * 100}ms, transform 400ms ease-out ${i * 100}ms`,
+            }}
+          >
+            <div className="apd-hr-vehicle">
+              <span className="quick-icon teal" style={{ width: 36, height: 36, flexShrink: 0 }}>
+                <Icon name="car" size={16}/>
+              </span>
+              <div>
+                <strong className="plate-small">{row.plate}</strong>
+                <small>{row.entry}</small>
+              </div>
+            </div>
+            <div className="apd-hr-stat"><span>Duración</span><strong className="tabnum">{row.duration}</strong></div>
+            <div className="apd-hr-stat"><span>Total</span><strong className="tabnum">{row.cost}</strong></div>
+            <Badge tone={row.tone}>{row.label}</Badge>
           </div>
         ))}
       </div>
-    </div>
+
+      {/* ── 3. Detail Modal with dimming backdrop ── */}
+      {showModal && (
+        <div className="apd-backdrop" onMouseDown={() => setShowModal(false)}>
+          <div
+            className="modal apd-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Detalle de sesión activa"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <div className="modal-head">
+              <h2>Detalle de sesión</h2>
+              <button className="icon-btn" onClick={() => setShowModal(false)} aria-label="Cerrar">
+                <Icon name="close"/>
+              </button>
+            </div>
+            <div className="payment-summary">
+              <div>
+                <span>Total estimado</span>
+                <strong className="tabnum">{v.cost}</strong>
+              </div>
+              <p>JHT · 492 · Entrada 08:42 a. m. · {v.time}</p>
+            </div>
+            <div className="form-grid" style={{ marginTop: 18 }}>
+              {APD_DETAILS.map(([label, val]) => (
+                <div key={label} className="apd-detail">
+                  <span>{label}</span>
+                  <strong>{val}</strong>
+                </div>
+              ))}
+            </div>
+            <div className="modal-actions">
+              <button className="secondary" onClick={() => setShowModal(false)}>Cerrar</button>
+              <button className="primary" onClick={() => { setShowModal(false); go("historial"); }}>
+                Ir al historial <Icon name="arrow" size={17}/>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </main>
   );
 }
 
-const ZONE_DATA: [string, string, number, string][] = [
-  ["Piso 1", "92%", 92, "critical"],
-  ["Piso 2", "64%", 64, "normal"],
-  ["Piso 3", "58%", 58, "normal"],
-  ["Visitantes", "76%", 76, "warning"],
-];
+const HOURLY_DATA = [22, 35, 58, 72, 83, 77, 68, 73] as const;
+const HOUR_LABELS = ["6a", "8a", "10a", "12p", "2p", "4p", "6p", "Ahora"] as const;
 
-function AnimatedZoneCard() {
-  const [widths, setWidths] = useState<number[]>(ZONE_DATA.map(() => 0));
-  const [nums, setNums] = useState<number[]>(ZONE_DATA.map(() => 0));
-  const announcedRef = useRef(false);
-  const ariaRef = useRef<HTMLSpanElement>(null);
-  const fmt = new Intl.NumberFormat("es-CO", { maximumFractionDigits: 0 });
-
+function OccupancyChart() {
+  const [ready, setReady] = useState(false);
   useEffect(() => {
-    announcedRef.current = false;
-    const duration = 500;
-    const start = performance.now();
-    function ease(t: number) { return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; }
-    function tick(now: number) {
-      const t = Math.min((now - start) / duration, 1);
-      const e = ease(t);
-      const rounded = ZONE_DATA.map(([,, pct]) => Math.round(e * pct));
-      setWidths(rounded);
-      setNums(rounded);
-      if (t < 1) {
-        requestAnimationFrame(tick);
-      } else if (!announcedRef.current) {
-        announcedRef.current = true;
-        setWidths(ZONE_DATA.map(([,, pct]) => pct));
-        setNums(ZONE_DATA.map(([,, pct]) => pct));
-        if (ariaRef.current)
-          ariaRef.current.textContent = ZONE_DATA.map(([label,, pct]) => `${label}: ${fmt.format(pct)}%`).join(", ");
-      }
-    }
-    requestAnimationFrame(tick);
+    const id = requestAnimationFrame(() => setReady(true));
+    return () => cancelAnimationFrame(id);
   }, []);
 
+  const liveLabel = HOURLY_DATA.map((h, i) => `${HOUR_LABELS[i]}: ${h}%`).join(", ");
+
   return (
-    <section className="zone-card">
-      <div className="section-title"><div><h3>Ocupación por zona</h3><p>Capacidad actual de cada piso</p></div></div>
-      {ZONE_DATA.map(([label,, , tone], i) => (
-        <div className="zone-row" key={label}>
-          <span>{label}</span>
-          <div><i style={{ width: `${widths[i]}%` }} className={tone} /></div>
-          <strong style={{ fontVariantNumeric: "tabular-nums" }}>{fmt.format(nums[i])}%</strong>
+    <section className="chart-card">
+      <div className="section-title">
+        <div><h3>Ocupación por hora</h3><p>Comparativo de hoy y promedio semanal</p></div>
+        <Badge tone="green">En vivo</Badge>
+      </div>
+      <div className="chart">
+        <div className="y-labels"><span>100%</span><span>75%</span><span>50%</span><span>25%</span><span>0%</span></div>
+        <div
+          className="bars"
+          aria-live="polite"
+          aria-atomic="true"
+          aria-label={ready ? `Ocupación por hora: ${liveLabel}` : undefined}
+        >
+          {HOURLY_DATA.map((h, i) => (
+            <div className="bar-group" key={i}>
+              <i
+                className={i === 7 ? "now" : ""}
+                style={{
+                  height: ready ? `${h}%` : "0%",
+                  transition: `height 800ms cubic-bezier(0.0,0.0,0.2,1) ${i * 80}ms`,
+                }}
+              />
+              <span>{HOUR_LABELS[i]}</span>
+            </div>
+          ))}
         </div>
-      ))}
-      <span ref={ariaRef} aria-live="polite" className="sr-only" />
+      </div>
     </section>
+  );
+}
+
+const zonePctFmt = new Intl.NumberFormat("es-CO", { maximumFractionDigits: 0 });
+
+function ZoneBar({ label, target, cls, delay }: { label: string; target: number; cls: string; delay: number }) {
+  const [val, setVal] = useState(0);
+  const [done, setDone] = useState(false);
+  const rafRef = useRef<number>(0);
+
+  useEffect(() => {
+    const tid = setTimeout(() => {
+      const duration = 900;
+      const start = performance.now();
+      const tick = (now: number) => {
+        const t = Math.min((now - start) / duration, 1);
+        const eased = t * (2 - t); // ease-out quadratic
+        setVal(target * eased);
+        if (t < 1) { rafRef.current = requestAnimationFrame(tick); }
+        else { setVal(target); setDone(true); }
+      };
+      rafRef.current = requestAnimationFrame(tick);
+    }, delay);
+    return () => { clearTimeout(tid); cancelAnimationFrame(rafRef.current); };
+  }, [target, delay]);
+
+  return (
+    <div className="zone-row">
+      <span>{label}</span>
+      <div>
+        <i style={{ width: `${val}%` }} className={cls}/>
+        <span className="sr-only" aria-live="polite" aria-atomic="true">
+          {done ? `${label}: ${target}%` : ""}
+        </span>
+      </div>
+      <strong className="tabnum" aria-hidden="true">{zonePctFmt.format(Math.round(val))}%</strong>
+    </div>
   );
 }
 
@@ -428,11 +660,18 @@ function Metric({ label, value, detail, icon, index = 0 }: { label: string; valu
 
 function AdminDashboard({ go }: { go: (page: string) => void }) {
   return <main className="page admin-page"><Header eyebrow="OPERACIÓN EN TIEMPO REAL" title="Resumen operativo"/><div className="admin-status"><div><span className="live-dot"/>Sistema operando normalmente</div><span>Última actualización: hace 8 segundos</span></div>
-    <div className="stats-row four"><Metric label="Ocupación actual" value="73%" detail="438 de 600 espacios" icon="car"/><Metric label="Ingresos hoy" value="1.284" detail="+12% vs. jueves anterior" icon="gate"/><Metric label="Recaudo del día" value="$ 18,4 M" detail="87% de la meta diaria" icon="card"/><Metric label="Alertas activas" value="3" detail="1 requiere atención" icon="alert"/></div>
-    <div className="dashboard-grid"><section className="chart-card"><div className="section-title"><div><h3>Ocupación por hora</h3><p>Comparativo de hoy y promedio semanal</p></div><Badge tone="green">En vivo</Badge></div><AnimatedChart /></section>
+    <div className="stats-row four"><Metric label="Ocupación actual" value="73%" detail="438 de 600 espacios" icon="car" index={0}/><Metric label="Ingresos hoy" value="1.284" detail="+12% vs. jueves anterior" icon="gate" index={1}/><Metric label="Recaudo del día" value="$ 18,4 M" detail="87% de la meta diaria" icon="card" index={2}/><Metric label="Alertas activas" value="3" detail="1 requiere atención" icon="alert" index={3}/></div>
+    <div className="dashboard-grid">
+      <OccupancyChart/>
       <section className="alerts-card"><div className="section-title"><div><h3>Alertas activas</h3><p>Eventos que requieren seguimiento</p></div><button className="text-btn">Ver todas</button></div><Alert tone="critical" title="Talanquera B sin respuesta" meta="Salida Sur · hace 4 min"/><Alert tone="warning" title="Capacidad crítica en Piso 1" meta="92% de ocupación · hace 8 min"/><Alert tone="info" title="Pago manual pendiente" meta="Caso #INC-2841 · hace 12 min"/></section>
     </div>
-    <div className="dashboard-grid lower"><AnimatedZoneCard /><section className="quick-admin"><h3>Acciones rápidas</h3><div><button onClick={()=>go("talanqueras")}><Icon name="gate"/><span><strong>Control de accesos</strong><small>Gestionar talanqueras</small></span><Icon name="chevron"/></button><button onClick={()=>go("reportes")}><Icon name="report"/><span><strong>Generar reporte</strong><small>Exportar cierre de turno</small></span><Icon name="chevron"/></button></div></section></div>
+    <div className="dashboard-grid lower">
+      <section className="zone-card">
+        <div className="section-title"><div><h3>Ocupación por zona</h3><p>Capacidad actual de cada piso</p></div></div>
+        {([["Piso 1",92,"critical"],["Piso 2",64,"normal"],["Piso 3",58,"normal"],["Visitantes",76,"warning"]] as [string,number,string][]).map((z,i)=><ZoneBar key={z[0]} label={z[0]} target={z[1]} cls={z[2]} delay={i*100}/>)}
+      </section>
+      <section className="quick-admin"><h3>Acciones rápidas</h3><div><button onClick={()=>go("talanqueras")}><Icon name="gate"/><span><strong>Control de accesos</strong><small>Gestionar talanqueras</small></span><Icon name="chevron"/></button><button onClick={()=>go("reportes")}><Icon name="report"/><span><strong>Generar reporte</strong><small>Exportar cierre de turno</small></span><Icon name="chevron"/></button></div></section>
+    </div>
   </main>;
 }
 
@@ -502,7 +741,7 @@ export default function App() {
 
   const navigateTo = (nextPage: string) => {
     if (nextPage === page) return;
-    const pagesOrder = ["inicio", "mapa", "vehiculos", "historial", "dashboard", "talanqueras", "reportes", "configuracion"];
+    const pagesOrder = ["inicio", "estacionamiento", "mapa", "vehiculos", "historial", "dashboard", "talanqueras", "reportes", "configuracion"];
     const prevIndex = pagesOrder.indexOf(page);
     const nextIndex = pagesOrder.indexOf(nextPage);
     const direction = nextIndex >= prevIndex ? "forward" : "backward";
@@ -534,6 +773,7 @@ export default function App() {
 
   const content: Record<string, React.ReactNode> = {
     inicio: <Home go={navigateTo} />,
+    estacionamiento: <ActiveParkingDashboard go={navigateTo} />,
     mapa: <AvailabilityMap />,
     vehiculos: <Vehicles />,
     historial: <History />,
