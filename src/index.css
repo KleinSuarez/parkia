@@ -666,6 +666,287 @@ body{margin:0;min-width:320px;min-height:100vh}button,input,select{font:inherit}
   transform: translateY(-1px);
 }
 
+/* ── AUTHENTICATION & LOGIN FLOW (A0) ── */
+.auth-wrapper {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 50% 20%, #155b55 0%, #0c3330 50%, #061b1a 100%);
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+.auth-wrapper::before {
+  content: "";
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(94, 224, 178, 0.08) 0%, transparent 70%);
+  top: -100px;
+  left: -100px;
+  pointer-events: none;
+}
+.auth-card {
+  background: #ffffff;
+  border-radius: 20px;
+  width: min(500px, 100%);
+  padding: 36px 38px;
+  box-shadow: 0 30px 80px rgba(0, 15, 14, 0.45);
+  position: relative;
+  z-index: 2;
+  animation: auth-card-in 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes auth-card-in {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.auth-brand > span {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #0d766e;
+  color: white;
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  font-weight: 800;
+}
+.auth-brand strong {
+  font-size: 24px;
+  letter-spacing: -0.6px;
+  color: #142523;
+}
+.auth-brand small {
+  font-size: 11px;
+  color: #6a7c79;
+  display: block;
+}
+.auth-role-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: #edf2f0;
+  border-radius: 12px;
+  padding: 4px;
+  gap: 4px;
+  margin-bottom: 20px;
+}
+.auth-role-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  padding: 10px 14px;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #657572;
+  transition: all 200ms var(--ease-in-ui);
+}
+.auth-role-btn.active {
+  background: #ffffff;
+  color: #0d766e;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+.auth-sub-nav {
+  display: flex;
+  border-bottom: 1px solid #e7ecea;
+  margin-bottom: 20px;
+}
+.auth-sub-nav button {
+  flex: 1;
+  padding: 10px 0;
+  border: 0;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 650;
+  color: #7a8b87;
+  position: relative;
+}
+.auth-sub-nav button.active {
+  color: #0d766e;
+  font-weight: 750;
+}
+.auth-sub-nav button.active::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 15%;
+  right: 15%;
+  height: 2.5px;
+  background: #0d766e;
+  border-radius: 3px 3px 0 0;
+}
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.auth-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 650;
+  color: #556663;
+}
+.auth-form input, .auth-form select {
+  height: 42px;
+  border: 1px solid #d3dedb;
+  border-radius: 8px;
+  padding: 0 12px;
+  font-size: 13px;
+  color: #1e2e2c;
+  background: #fafcfb;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.auth-form input:focus, .auth-form select:focus {
+  outline: none;
+  border-color: #0d766e;
+  box-shadow: 0 0 0 3px rgba(13, 118, 110, 0.15);
+}
+.demo-quick-access {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px dashed #dbe3e0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.demo-quick-access p {
+  margin: 0;
+  font-size: 10px;
+  color: #80908c;
+  text-align: center;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+.demo-btn {
+  background: #f0f7f5;
+  border: 1px solid #bad8d3;
+  color: #0c5751;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 12px;
+  font-weight: 750;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 180ms ease;
+}
+.demo-btn:hover {
+  background: #e3f1ee;
+  border-color: #0d766e;
+  transform: translateY(-1px);
+}
+
+/* ── DIGITAL QR TICKET ── */
+.qr-ticket {
+  background: #ffffff;
+  border: 2px dashed #b9d8d3;
+  border-radius: 16px;
+  padding: 24px;
+  text-align: center;
+  margin-top: 12px;
+  position: relative;
+  background-image: radial-gradient(circle at 0 50%, transparent 12px, #fff 13px),
+                    radial-gradient(circle at 100% 50%, transparent 12px, #fff 13px);
+  background-position: 0 50%, 100% 50%;
+  background-repeat: no-repeat;
+}
+.qr-box {
+  width: 160px;
+  height: 160px;
+  margin: 14px auto;
+  border: 1px solid #d4dfdc;
+  border-radius: 12px;
+  padding: 10px;
+  background: #fff;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+}
+.qr-box svg {
+  width: 100%;
+  height: 100%;
+}
+.qr-meta {
+  font-size: 11px;
+  color: #6a7b77;
+  margin-top: 10px;
+}
+.qr-meta strong {
+  color: #0d766e;
+  display: block;
+  font-size: 14px;
+  margin-top: 3px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── FLOATING DEMO CONTROLS ── */
+.floating-demo-bar {
+  position: fixed;
+  bottom: 20px;
+  right: 24px;
+  z-index: 99;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid #cfe0dc;
+  box-shadow: 0 10px 30px rgba(0, 24, 21, 0.16);
+  padding: 6px 10px 6px 14px;
+  border-radius: 50px;
+  font-size: 11px;
+  color: #3f514e;
+}
+.floating-demo-bar strong {
+  font-weight: 750;
+  color: #0d766e;
+}
+.floating-reset-btn {
+  border: 0;
+  background: #f0f6f4;
+  color: #0d766e;
+  border-radius: 30px;
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 750;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+.floating-reset-btn:hover {
+  background: #0d766e;
+  color: white;
+}
+
+/* ── GATE STATES & ANIMATIONS ── */
+.gate-card.open-manual {
+  border: 2px solid #22c55e;
+  background: #f2fbf6;
+  box-shadow: 0 6px 20px rgba(34, 197, 94, 0.15);
+  animation: pulse-open 1.5s ease-in-out infinite alternate;
+}
+@keyframes pulse-open {
+  from { border-color: #22c55e; }
+  to { border-color: #86efac; }
+}
+
+
 
 
 
