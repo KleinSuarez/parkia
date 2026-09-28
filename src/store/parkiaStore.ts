@@ -647,6 +647,40 @@ export const parkiaActions = {
     emitChange();
   },
 
+  // Flujo U3: Actualizar perfil del conductor
+  updateProfile(updates: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    documentId?: string;
+  }) {
+    if (!currentState.currentUser) return;
+
+    const name = updates.name?.trim() || currentState.currentUser.name;
+    const avatarText = name
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((p) => p[0].toUpperCase())
+      .join("") || currentState.currentUser.avatarText;
+
+    currentState = {
+      ...currentState,
+      currentUser: {
+        ...currentState.currentUser,
+        name,
+        email: updates.email?.trim() || currentState.currentUser.email,
+        phone: updates.phone !== undefined ? updates.phone.trim() : currentState.currentUser.phone,
+        documentId:
+          updates.documentId !== undefined
+            ? updates.documentId.trim()
+            : currentState.currentUser.documentId,
+        avatarText,
+      },
+    };
+    emitChange();
+  },
+
   // Flujo U4: Pagar sesión pendiente o activa
   paySession(sessionId: string, paymentMethod: string): { success: boolean; qrCode: string } {
     const qr = `QR-PARKIA-${sessionId}-${Date.now().toString(36).toUpperCase()}`;
