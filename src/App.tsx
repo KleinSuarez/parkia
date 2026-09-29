@@ -4,6 +4,9 @@ import { Icon, Badge, IconName } from "./components/Icon";
 import { AuthScreen } from "./components/AuthScreen";
 import { PaymentModal } from "./components/PaymentModal";
 import { MobileDriverApp } from "./components/MobileDriverApp";
+import { CashierDesk } from "./components/CashierDesk";
+import { YardControl } from "./components/YardControl";
+import { ShiftManager } from "./components/ShiftManager";
 
 // ── COMPONENTES REUTILIZABLES DE ANIMACIÓN Y ACCESIBILIDAD ──
 function AnimatedValue({
@@ -160,19 +163,130 @@ function Header({
   eyebrow: string;
   avatarText?: string;
 }) {
+  const [state] = useParkiaStore();
+  const [showNotifs, setShowNotifs] = useState(false);
+  const [dismissedIds, setDismissedIds] = useState<string[]>([]);
+
+  const activeAlerts = state.alerts.filter((a) => !dismissedIds.includes(a.id));
+
   return (
-    <div className="page-head">
+    <div className="page-head" style={{ position: "relative" }}>
       <div>
         <p className="eyebrow">{eyebrow}</p>
         <h1>{title}</h1>
       </div>
       <div className="head-actions">
-        <button className="icon-btn" aria-label="Notificaciones">
+        <button
+          className="icon-btn"
+          aria-label="Notificaciones"
+          onClick={() => setShowNotifs(!showNotifs)}
+          style={{ position: "relative" }}
+        >
           <Icon name="bell" />
-          <span className="notification-dot" />
+          {activeAlerts.length > 0 && <span className="notification-dot" />}
         </button>
         <div className="avatar">{avatarText}</div>
       </div>
+
+      {showNotifs && (
+        <div
+          className="notifications-popover"
+          style={{
+            position: "absolute",
+            top: "100%",
+            right: 0,
+            marginTop: 8,
+            width: 360,
+            maxWidth: "92vw",
+            background: "#ffffff",
+            borderRadius: 12,
+            boxShadow: "0 10px 30px rgba(0, 0, 0, 0.18)",
+            border: "1px solid #e2e8f0",
+            zIndex: 9999,
+            overflow: "hidden",
+            animation: "stagger-fade-up 180ms ease both",
+          }}
+        >
+          <div
+            style={{
+              padding: "12px 16px",
+              background: "#0f172a",
+              color: "#ffffff",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Icon name="bell" size={16} />
+              <strong style={{ fontSize: 13 }}>Centro de Notificaciones</strong>
+            </div>
+            <button
+              onClick={() => setShowNotifs(false)}
+              style={{ background: "transparent", border: 0, color: "#94a3b8", cursor: "pointer", padding: 2 }}
+            >
+              <Icon name="close" size={14} />
+            </button>
+          </div>
+
+          <div style={{ maxHeight: 320, overflowY: "auto", padding: 12 }}>
+            {activeAlerts.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "24px 10px", color: "#64748b", fontSize: 13 }}>
+                <Icon name="check" size={24} />
+                <p style={{ margin: "8px 0 0" }}>Todas las notificaciones al día</p>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {activeAlerts.map((al) => (
+                  <div
+                    key={al.id}
+                    style={{
+                      display: "flex",
+                      gap: 10,
+                      alignItems: "flex-start",
+                      padding: 10,
+                      background: al.tone === "critical" ? "#fef2f2" : al.tone === "warning" ? "#fffbeb" : "#f0fdfa",
+                      border: `1px solid ${al.tone === "critical" ? "#fecaca" : al.tone === "warning" ? "#fde68a" : "#ccfbf1"}`,
+                      borderRadius: 8,
+                      fontSize: 12,
+                    }}
+                  >
+                    <Icon
+                      name={al.tone === "critical" ? "close" : al.tone === "warning" ? "alert" : "bell"}
+                      size={15}
+                    />
+                    <div style={{ flex: 1 }}>
+                      <strong style={{ display: "block", color: "#0f172a" }}>{al.title}</strong>
+                      <span style={{ color: "#64748b", fontSize: 11 }}>{al.meta}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {activeAlerts.length > 0 && (
+            <div
+              style={{
+                padding: "8px 14px",
+                background: "#f8fafc",
+                borderTop: "1px solid #e2e8f0",
+                display: "flex",
+                justifyContent: "flex-end",
+              }}
+            >
+              <button
+                type="button"
+                className="text-btn"
+                style={{ fontSize: 12, color: "#0d766e", fontWeight: 700 }}
+                onClick={() => setDismissedIds(state.alerts.map((a) => a.id))}
+              >
+                Marcar todas como leídas
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -792,7 +906,7 @@ function Vehicles() {
                   className={`mask-accordion${isExpanded ? " open" : ""}`}
                   style={{ gridColumn: "1/-1" }}
                 >
-                  <div className="mask-content" {...(!isExpanded ? { inert: "" } : {})}>
+                  <div className="mask-content" {...(!isExpanded ? { inert: true as any } : {})}>
                     <div className="vehicle-meta">
                       <span style={{ "--i": 0 } as React.CSSProperties}>
                         Tipo
@@ -1507,7 +1621,20 @@ function AdminDashboard({ go }: { go: (page: string) => void }) {
             </button>
           </div>
           {state.alerts.map((al) => (
-            <div className={`alert-row ${al.tone}`} key={al.id}>
+            <div
+              className={`alert-row ${al.tone}`}
+              key={al.id}
+              role="button"
+              tabIndex={0}
+              style={{ cursor: "pointer" }}
+              title={`Clic para atender: ${al.title}`}
+              onClick={() => {
+                if (al.title.toLowerCase().includes("talanquera")) go("talanqueras");
+                else if (al.title.toLowerCase().includes("piso") || al.title.toLowerCase().includes("capacidad")) go("patio");
+                else if (al.title.toLowerCase().includes("pago") || al.title.toLowerCase().includes("caso")) go("caja");
+                else go("talanqueras");
+              }}
+            >
               <span>
                 <Icon
                   name={al.tone === "critical" ? "close" : al.tone === "warning" ? "alert" : "bell"}
@@ -1516,7 +1643,7 @@ function AdminDashboard({ go }: { go: (page: string) => void }) {
               </span>
               <div>
                 <strong>{al.title}</strong>
-                <small>{al.meta}</small>
+                <small>{al.meta} · Clic para gestionar</small>
               </div>
               <Icon name="chevron" size={17} />
             </div>
@@ -1524,51 +1651,61 @@ function AdminDashboard({ go }: { go: (page: string) => void }) {
         </section>
       </div>
 
-      <div className="dashboard-grid lower">
-        <section className="zone-card">
+      <div className="dashboard-grid lower" style={{ gridTemplateColumns: "1.1fr 1fr", gap: 20 }}>
+        {/* Live Event Stream [O-03] */}
+        <section className="alerts-card" style={{ height: "auto" }}>
           <div className="section-title">
             <div>
-              <h3>Ocupación por piso</h3>
-              <p>Capacidad dinámica calculada desde el mapa</p>
+              <h3>Telemetría en Vivo (Event Stream)</h3>
+              <p>Entradas, salidas y pagos en tiempo real</p>
             </div>
+            <span className="live-dot" />
           </div>
-          <ZoneBar
-            label="Piso 1"
-            target={p1Pct}
-            cls={p1Pct > 80 ? "critical" : p1Pct > 60 ? "warning" : "normal"}
-            delay={0}
-          />
-          <ZoneBar
-            label="Piso 2"
-            target={p2Pct}
-            cls={p2Pct > 80 ? "critical" : p2Pct > 60 ? "warning" : "normal"}
-            delay={100}
-          />
-          <ZoneBar
-            label="Piso 3"
-            target={p3Pct}
-            cls={p3Pct > 80 ? "critical" : p3Pct > 60 ? "warning" : "normal"}
-            delay={200}
-          />
-          <ZoneBar label="Zona Visitantes" target={76} cls="warning" delay={300} />
+          <div style={{ maxHeight: 260, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
+            {state.liveEvents.slice(0, 8).map((ev) => (
+              <div key={ev.id} className="live-event-tile">
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <Badge tone={ev.badgeTone}>{ev.time}</Badge>
+                  <span style={{ color: "#334155", fontWeight: 650 }}>{ev.description}</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </section>
 
+        {/* Acciones Rápidas del Operador en Monitor */}
         <section className="quick-admin">
           <h3>Acciones rápidas de control</h3>
           <div>
-            <button onClick={() => go("talanqueras")}>
-              <Icon name="gate" />
+            <button onClick={() => go("caja")}>
+              <Icon name="card" />
               <span>
-                <strong>Control de accesos</strong>
-                <small>Abrir talanqueras y auditoría</small>
+                <strong>Caja y Ventanilla POS (F2)</strong>
+                <small>Liquidación, cobro y tickets</small>
               </span>
               <Icon name="chevron" />
             </button>
-            <button onClick={() => go("reportes")}>
-              <Icon name="report" />
+            <button onClick={() => go("talanqueras")}>
+              <Icon name="gate" />
               <span>
-                <strong>Generar reporte</strong>
-                <small>Exportar archivo CSV</small>
+                <strong>Control de accesos (F6)</strong>
+                <small>Abrir talanqueras y ticket perdido</small>
+              </span>
+              <Icon name="chevron" />
+            </button>
+            <button onClick={() => go("patio")}>
+              <Icon name="car" />
+              <span>
+                <strong>Patio y Bahías</strong>
+                <small>Bloqueo y mantenimiento</small>
+              </span>
+              <Icon name="chevron" />
+            </button>
+            <button onClick={() => go("turnos")}>
+              <Icon name="clock" />
+              <span>
+                <strong>Turnos y Arqueo (F12)</strong>
+                <small>Corte Z y periféricos</small>
               </span>
               <Icon name="chevron" />
             </button>
@@ -1579,12 +1716,127 @@ function AdminDashboard({ go }: { go: (page: string) => void }) {
   );
 }
 
-// ── FLUJO O2: CONTROL DE TALANQUERAS Y EXCEPCIONES ──
+// ── FLUJOS O2 Y O8: CONTROL DE TALANQUERAS Y TICKET EXTRAVIADO ──
+function GateItemCard({
+  gate,
+  index,
+  onOpen,
+}: {
+  gate: GateAccess;
+  index: number;
+  onOpen: (gateName: string) => void;
+}) {
+  const isOpenManual = gate.state === "Abierta (Manual)";
+  const [secondsLeft, setSecondsLeft] = useState<number>(6);
+
+  useEffect(() => {
+    if (!isOpenManual) {
+      setSecondsLeft(6);
+      return;
+    }
+
+    const expiresAt = gate.manualOpenExpiresAt || (Date.now() + 6000);
+
+    const updateTimer = () => {
+      const diffMs = expiresAt - Date.now();
+      const remainingSec = Math.max(1, Math.ceil(diffMs / 1000));
+      setSecondsLeft(remainingSec);
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 200);
+
+    return () => clearInterval(interval);
+  }, [isOpenManual, gate.manualOpenExpiresAt]);
+
+  return (
+    <div
+      className={`gate-card ${gate.connection === "offline" ? "offline" : ""} ${
+        isOpenManual ? "open-manual" : ""
+      }`}
+      style={{ "--i": index } as React.CSSProperties}
+    >
+      <div className="gate-top">
+        <span className="gate-icon">
+          <Icon name="gate" size={26} />
+        </span>
+        <Badge tone={isOpenManual ? "green" : gate.connection === "online" ? "green" : "critical"}>
+          {isOpenManual ? `Abierta (${secondsLeft}s)` : gate.connection === "online" ? "En línea" : "Sin respuesta"}
+        </Badge>
+      </div>
+
+      <h3>{gate.name}</h3>
+      <p>{gate.eventsToday} lecturas registradas hoy</p>
+
+      <div className="gate-details">
+        <span>
+          Sensor
+          <i>{gate.sensor}</i>
+        </span>
+        <span>
+          Estado
+          <i style={{ color: isOpenManual ? "#0d766e" : undefined, fontWeight: 700 }}>
+            {isOpenManual ? `Cerrando en ${secondsLeft}s` : gate.state}
+          </i>
+        </span>
+      </div>
+
+      <button
+        className={
+          isOpenManual
+            ? "primary full"
+            : gate.connection === "online"
+            ? "secondary full"
+            : "primary full danger"
+        }
+        onClick={() => onOpen(gate.name)}
+        disabled={isOpenManual}
+        style={{
+          position: "relative",
+          overflow: "hidden",
+          transition: "all 200ms ease",
+        }}
+      >
+        {isOpenManual ? (
+          <>
+            <span
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                bottom: 0,
+                width: `${(secondsLeft / 6) * 100}%`,
+                background: "rgba(255, 255, 255, 0.22)",
+                transition: "width 200ms linear",
+                pointerEvents: "none",
+              }}
+            />
+            <span style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+              <span className="live-dot" style={{ width: 8, height: 8, background: "#86efac" }} />
+              Cerrando en {secondsLeft}s...
+            </span>
+          </>
+        ) : gate.connection === "online" ? (
+          "Abrir manualmente (F6)"
+        ) : (
+          "Gestionar incidencia"
+        )}
+      </button>
+    </div>
+  );
+}
+
 function Gates() {
   const [state, actions] = useParkiaStore();
+  const [gateTab, setGateTab] = useState<"talanqueras" | "perdido">("talanqueras");
   const [confirmGate, setConfirmGate] = useState<string | null>(null);
   const [reason, setReason] = useState("Autorizar salida por contingencia");
   const [toast, setToast] = useState<string | null>(null);
+
+  // Estados de Ticket Extraviado (Flujo O-08)
+  const [lostPlate, setLostPlate] = useState("ABC · 123");
+  const [lostMethod, setLostMethod] = useState("Efectivo");
+  const [lostReceipt, setLostReceipt] = useState<any | null>(null);
 
   function handleConfirmOpen() {
     if (!confirmGate) return;
@@ -1594,11 +1846,35 @@ function Gates() {
     setTimeout(() => setToast(null), 4000);
   }
 
+  function handleResolveLostTicket() {
+    if (!lostPlate.trim()) return;
+    const res = actions.resolveLostTicket({
+      plate: lostPlate,
+      replacementFee: 10000,
+      paymentMethod: lostMethod,
+      operatorName: state.currentUser?.name || "Laura Gómez",
+    });
+
+    setLostReceipt(res);
+    setToast(`Ticket extraviado resuelto: ${lostPlate}. Talanquera Salida Norte levantada.`);
+    setTimeout(() => setToast(null), 4500);
+  }
+
+  const selectedLpr = state.lprCaptures.find(
+    (l) => l.plate.toUpperCase().replace(/\s/g, "") === lostPlate.toUpperCase().replace(/\s/g, "")
+  ) || state.lprCaptures[0];
+
+  const fmt = new Intl.NumberFormat("es-CO", {
+    style: "currency",
+    currency: "COP",
+    maximumFractionDigits: 0,
+  });
+
   return (
     <main className="page admin-page">
       <Header
-        eyebrow="CONTROL DE ACCESOS"
-        title="Talanqueras y registro de excepciones"
+        eyebrow="SUPERVISIÓN Y CONTINGENCIAS"
+        title="Control de Barreras y Ticket Extraviado"
         avatarText={state.currentUser?.avatarText || "LG"}
       />
 
@@ -1608,7 +1884,7 @@ function Gates() {
             <Icon name="gate" size={16} />
           </span>
           <div>
-            <strong>Apertura Manual Ejecutada</strong>
+            <strong>Operación Ejecutada</strong>
             <small>{toast}</small>
           </div>
           <button onClick={() => setToast(null)}>
@@ -1617,112 +1893,239 @@ function Gates() {
         </div>
       )}
 
-      <div className="section-title">
-        <div>
-          <h3>Estado de accesos vehiculares</h3>
-          <p>Supervisión telemétrica y apertura manual auditada.</p>
-        </div>
+      {/* Selector de Sub-pestaña */}
+      <div className="operator-tabs">
+        <button
+          type="button"
+          className={gateTab === "talanqueras" ? "active" : ""}
+          onClick={() => setGateTab("talanqueras")}
+        >
+          <Icon name="gate" size={16} /> [O-07] Control y Apertura Manual de Barreras (F6)
+        </button>
+        <button
+          type="button"
+          className={gateTab === "perdido" ? "active" : ""}
+          onClick={() => setGateTab("perdido")}
+        >
+          <Icon name="search" size={16} /> [O-08] Resolución de Ticket Extraviado por LPR (F9)
+        </button>
       </div>
 
-      <div className="gate-grid">
-        {state.gates.map((g, i) => {
-          const isOpenManual = g.state === "Abierta (Manual)";
-          return (
-            <div
-              className={`gate-card ${g.connection === "offline" ? "offline" : ""} ${
-                isOpenManual ? "open-manual" : ""
-              }`}
-              key={g.id}
-              style={{ "--i": i } as React.CSSProperties}
-            >
-              <div className="gate-top">
-                <span className="gate-icon">
-                  <Icon name="gate" size={26} />
-                </span>
-                <Badge tone={isOpenManual ? "green" : g.connection === "online" ? "green" : "critical"}>
-                  {isOpenManual ? "Abierta (Manual)" : g.connection === "online" ? "En línea" : "Sin respuesta"}
-                </Badge>
+      {/* SUB-PESTAÑA 1: TALANQUERAS (O-07) */}
+      {gateTab === "talanqueras" && (
+        <>
+          <div className="section-title">
+            <div>
+              <h3>Estado de accesos vehiculares</h3>
+              <p>Supervisión telemétrica y apertura manual forzada con motivo tipificado.</p>
+            </div>
+          </div>
+
+          <div className="gate-grid">
+            {state.gates.map((g, i) => (
+              <GateItemCard
+                key={g.id}
+                gate={g}
+                index={i}
+                onOpen={(gateName) => setConfirmGate(gateName)}
+              />
+            ))}
+          </div>
+
+          <section className="table-card">
+            <div className="table-head">
+              <div>
+                <h3>Bitácora de excepciones operativas</h3>
+                <p>Registro auditado de incidencias y aperturas manuales con operador responsable.</p>
               </div>
-
-              <h3>{g.name}</h3>
-              <p>{g.eventsToday} lecturas registradas hoy</p>
-
-              <div className="gate-details">
-                <span>
-                  Sensor
-                  <i>{g.sensor}</i>
-                </span>
-                <span>
-                  Estado
-                  <i style={{ color: isOpenManual ? "#0d766e" : undefined, fontWeight: 700 }}>
-                    {g.state}
-                  </i>
-                </span>
-              </div>
-
               <button
-                className={
-                  isOpenManual
-                    ? "primary full"
-                    : g.connection === "online"
-                    ? "secondary full"
-                    : "primary full danger"
-                }
-                onClick={() => setConfirmGate(g.name)}
-                disabled={isOpenManual}
+                className="primary compact"
+                onClick={() => setConfirmGate("Entrada Norte")}
               >
-                {isOpenManual
-                  ? "Cerrando en 6s..."
-                  : g.connection === "online"
-                  ? "Abrir manualmente"
-                  : "Gestionar incidencia"}
+                <Icon name="plus" size={17} /> Registrar apertura
               </button>
             </div>
-          );
-        })}
-      </div>
 
-      <section className="table-card">
-        <div className="table-head">
-          <div>
-            <h3>Bitácora de excepciones operativas</h3>
-            <p>Registro auditado de incidencias y aperturas manuales con operador responsable.</p>
-          </div>
-          <button
-            className="primary compact"
-            onClick={() => setConfirmGate("Entrada Norte")}
-          >
-            <Icon name="plus" size={17} /> Registrar apertura
-          </button>
-        </div>
+            <div className="data-table exceptions">
+              <div className="tr th">
+                <span>ID</span>
+                <span>Hora</span>
+                <span>Motivo / Tipo</span>
+                <span>Acceso</span>
+                <span>Operador</span>
+                <span>Estado</span>
+              </div>
 
-        <div className="data-table exceptions">
-          <div className="tr th">
-            <span>ID</span>
-            <span>Hora</span>
-            <span>Motivo / Tipo</span>
-            <span>Acceso</span>
-            <span>Operador</span>
-            <span>Estado</span>
-          </div>
-
-          {state.exceptions.map((r) => (
-            <div className="tr" key={r.id}>
-              <span>
-                <strong>{r.id}</strong>
-              </span>
-              <span>{r.time}</span>
-              <span>{r.type}</span>
-              <span>{r.accessGate}</span>
-              <span>{r.operator}</span>
-              <span>
-                <Badge tone={r.status === "Resuelto" ? "paid" : "pending"}>{r.status}</Badge>
-              </span>
+              {state.exceptions.map((r) => (
+                <div className="tr" key={r.id}>
+                  <span>
+                    <strong>{r.id}</strong>
+                  </span>
+                  <span>{r.time}</span>
+                  <span>{r.type}</span>
+                  <span>{r.accessGate}</span>
+                  <span>{r.operator}</span>
+                  <span>
+                    <Badge tone={r.status === "Resuelto" ? "paid" : "pending"}>{r.status}</Badge>
+                  </span>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </section>
+          </section>
+        </>
+      )}
 
+      {/* SUB-PESTAÑA 2: TICKET EXTRAVIADO (O-08) */}
+      {gateTab === "perdido" && (
+        <div className="dashboard-grid" style={{ gridTemplateColumns: "1.2fr 1fr", gap: 20 }}>
+          <section className="table-card" style={{ padding: 22 }}>
+            <h3 style={{ margin: "0 0 6px", fontSize: 18 }}>[O-08] Localización de Vehículo por Cámaras LPR</h3>
+            <p style={{ margin: "0 0 16px", fontSize: 13, color: "#6b7280" }}>
+              Digita la placa del usuario para buscar en el histórico fotográfico la hora exacta de ingreso y calcular la estancia justa.
+            </p>
+
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 6 }}>
+                Placa a consultar en archivo LPR:
+              </label>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input
+                  type="text"
+                  value={lostPlate}
+                  onChange={(e) => setLostPlate(e.target.value.toUpperCase())}
+                  placeholder="Ej: ABC 123"
+                  style={{ flex: 1, height: 42, padding: "0 12px", borderRadius: 8, border: "1px solid #d1d5db", fontWeight: 700, fontSize: 15 }}
+                />
+              </div>
+            </div>
+
+            {/* Accesos rápidos de placas en archivo */}
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+              <span style={{ fontSize: 11, color: "#6b7280", width: "100%", fontWeight: 600 }}>Capturas recientes en archivo LPR:</span>
+              {state.lprCaptures.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  className={`lpr-chip-btn ${lostPlate === c.plate ? "active" : ""}`}
+                  onClick={() => setLostPlate(c.plate)}
+                >
+                  {c.plate} ({c.time})
+                </button>
+              ))}
+            </div>
+
+            {/* Tarjeta de Evidencia Fotográfica LPR */}
+            {selectedLpr && (
+              <div style={{ background: "#f9fafb", padding: 14, borderRadius: 10, border: "1px solid #e5e7eb", marginBottom: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 13 }}>
+                  <span style={{ color: "#6b7280" }}>Acceso de Entrada:</span>
+                  <strong>{selectedLpr.gate}</strong>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 13 }}>
+                  <span style={{ color: "#6b7280" }}>Hora de Captura LPR:</span>
+                  <strong>{selectedLpr.date} · {selectedLpr.time}</strong>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, fontSize: 13 }}>
+                  <span style={{ color: "#6b7280" }}>Índice de Certeza LPR:</span>
+                  <Badge tone="green">{selectedLpr.confidence}% Fiable</Badge>
+                </div>
+
+                {/* Simulador de Cuadro de Cámara LPR */}
+                <div
+                  style={{
+                    height: 110,
+                    background: "#1f2937",
+                    borderRadius: 8,
+                    color: "white",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    position: "relative",
+                    overflow: "hidden",
+                    border: "2px solid #374151",
+                  }}
+                >
+                  <span style={{ position: "absolute", top: 6, left: 8, fontSize: 10, color: "#10b981", fontWeight: 700 }}>
+                    ● REC CCTV-LPR · {selectedLpr.gate}
+                  </span>
+                  <span style={{ fontSize: 24, fontWeight: 900, letterSpacing: 2, background: "#f3f4f6", color: "#111827", padding: "4px 16px", borderRadius: 4, border: "2px solid #111827" }}>
+                    {selectedLpr.plate}
+                  </span>
+                  <span style={{ position: "absolute", bottom: 6, right: 8, fontSize: 10, color: "#9ca3af" }}>
+                    FOTO TESTIGO REGISTRADA
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 4 }}>
+                  Medio de Cobro
+                </label>
+                <select
+                  value={lostMethod}
+                  onChange={(e) => setLostMethod(e.target.value)}
+                  style={{ width: "100%", height: 42, borderRadius: 6, border: "1px solid #d1d5db", padding: "0 10px" }}
+                >
+                  <option>Efectivo</option>
+                  <option>Datáfono POS</option>
+                  <option>QR Digital</option>
+                </select>
+              </div>
+
+              <div style={{ flex: 1.5, display: "flex", alignItems: "flex-end" }}>
+                <button
+                  type="button"
+                  className="primary full"
+                  onClick={handleResolveLostTicket}
+                  style={{ height: 42, fontWeight: 700, background: "#0d766e" }}
+                >
+                  Cobrar y Emitir Pase (F9)
+                </button>
+              </div>
+            </div>
+          </section>
+
+          {/* Desglose de Liquidación y Comprobante */}
+          <section className="table-card" style={{ padding: 22 }}>
+            <h3 style={{ margin: "0 0 12px", fontSize: 16 }}>Liquidación Reglamentaria</h3>
+
+            <div style={{ background: "#fef3c7", border: "1px solid #fde68a", padding: 14, borderRadius: 8, marginBottom: 16 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 13 }}>
+                <span>Estancia calculada (LPR):</span>
+                <span>$ 15.000 COP</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 13 }}>
+                <span>Reposición reglamentaria de ticket:</span>
+                <strong>+ $ 10.000 COP</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 8, borderTop: "1px solid #d97706", fontSize: 16, fontWeight: 800 }}>
+                <span>TOTAL A COBRAR:</span>
+                <span style={{ color: "#b45309" }}>$ 25.000 COP</span>
+              </div>
+            </div>
+
+            {lostReceipt && (
+              <div style={{ border: "2px dashed #059669", background: "#ecfdf5", padding: 16, borderRadius: 8, textAlign: "center" }}>
+                <div style={{ display: "inline-flex", background: "#059669", color: "white", padding: 8, borderRadius: "50%", marginBottom: 8 }}>
+                  <Icon name="check" size={20} />
+                </div>
+                <h4 style={{ margin: "0 0 4px", color: "#065f46" }}>Pase de Salida Emitido</h4>
+                <p style={{ margin: "0 0 10px", fontSize: 12, color: "#047857" }}>
+                  Incidencia registrada y talanquera de Salida Norte abierta durante 6 segundos.
+                </p>
+                <button className="secondary compact" onClick={() => window.print()}>
+                  <Icon name="print" size={14} /> Imprimir Comprobante de Contingencia
+                </button>
+              </div>
+            )}
+          </section>
+        </div>
+      )}
+
+      {/* Modal de Apertura Manual */}
       {confirmGate && (
         <Modal title="Confirmar apertura manual auditada" onClose={() => setConfirmGate(null)}>
           <div className="critical-message">
@@ -1930,6 +2333,8 @@ function Reports() {
 function Settings() {
   const [state, actions] = useParkiaStore();
   const [saved, setSaved] = useState(false);
+  const [configTab, setConfigTab] = useState<"tarifas" | "vehiculos" | "capacidad" | "usuarios">("tarifas");
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   // Form states
   const [carRate, setCarRate] = useState(state.tariffs.carRate);
@@ -1943,6 +2348,29 @@ function Settings() {
   const [evRate, setEvRate] = useState(state.tariffs.evRate);
   const [evCap, setEvCap] = useState(state.tariffs.evCap);
   const [evGrace, setEvGrace] = useState(state.tariffs.evGrace);
+
+  // Estados de Capacidad
+  const [floor1Cap, setFloor1Cap] = useState(40);
+  const [floor2Cap, setFloor2Cap] = useState(35);
+  const [floor3Cap, setFloor3Cap] = useState(25);
+  const [saturationThreshold, setSaturationThreshold] = useState(90);
+
+  // Estados de Tipos de Vehículo
+  const [vehiclesConfig, setVehiclesConfig] = useState([
+    { id: "car", name: "Automóvil / Sedán", enabled: true, surcharge: 0, graceMin: 10 },
+    { id: "moto", name: "Motocicletas", enabled: true, surcharge: -35, graceMin: 10 },
+    { id: "ev", name: "Eléctrico / Híbrido (EV)", enabled: true, surcharge: -10, graceMin: 15 },
+    { id: "pmr", name: "PMR Movilidad Reducida", enabled: true, surcharge: 0, graceMin: 20 },
+    { id: "bike", name: "Bicicletas / Patinetas", enabled: true, surcharge: -100, graceMin: 30 },
+  ]);
+
+  // Estados de Personal y Usuarios
+  const [staffUsers, setStaffUsers] = useState([
+    { id: "u1", name: "Laura Gómez", role: "Operador Principal", shift: "Turno AM (06:00 - 14:00)", station: "Garita Norte", status: "Activo" },
+    { id: "u2", name: "Carlos Mendoza", role: "Supervisor de Zona", shift: "Turno Rotativo", station: "Control Central", status: "Activo" },
+    { id: "u3", name: "Juan Torres", role: "Operador de Apoyo", shift: "Turno PM (14:00 - 22:00)", station: "Garita Sur", status: "Activo" },
+    { id: "u4", name: "Mario Parra", role: "Auditor Fiscal", shift: "Administrativo", station: "Auditoría Central", status: "Activo" },
+  ]);
 
   function handleSaveTariffs() {
     actions.updateTariffs(
@@ -1964,6 +2392,16 @@ function Settings() {
     setTimeout(() => setSaved(false), 4500);
   }
 
+  function handleSaveCapacity() {
+    setToastMsg("Capacidades por piso y umbrales de saturación guardados correctamente.");
+    setTimeout(() => setToastMsg(null), 3500);
+  }
+
+  function handleSaveVehicles() {
+    setToastMsg("Configuración de categorías vehiculares y tolerancias actualizada.");
+    setTimeout(() => setToastMsg(null), 3500);
+  }
+
   return (
     <main className="page admin-page">
       <Header
@@ -1972,132 +2410,389 @@ function Settings() {
         avatarText={state.currentUser?.avatarText || "LG"}
       />
 
+      {toastMsg && (
+        <div className="toast" style={{ top: 90, bottom: "auto", background: "#0d766e" }}>
+          <span>
+            <Icon name="check" size={16} />
+          </span>
+          <div>
+            <strong>Configuración Guardada</strong>
+            <small>{toastMsg}</small>
+          </div>
+          <button onClick={() => setToastMsg(null)}>
+            <Icon name="close" size={14} />
+          </button>
+        </div>
+      )}
+
       <div className="settings-tabs">
-        <button className="active">Tarifas</button>
-        <button>Tipos de vehículo</button>
-        <button>Zonas y capacidad</button>
-        <button>Usuarios y permisos</button>
+        <button
+          className={configTab === "tarifas" ? "active" : ""}
+          onClick={() => setConfigTab("tarifas")}
+        >
+          Tarifas
+        </button>
+        <button
+          className={configTab === "vehiculos" ? "active" : ""}
+          onClick={() => setConfigTab("vehiculos")}
+        >
+          Tipos de vehículo
+        </button>
+        <button
+          className={configTab === "capacidad" ? "active" : ""}
+          onClick={() => setConfigTab("capacidad")}
+        >
+          Zonas y capacidad
+        </button>
+        <button
+          className={configTab === "usuarios" ? "active" : ""}
+          onClick={() => setConfigTab("usuarios")}
+        >
+          Usuarios y permisos
+        </button>
       </div>
 
-      <div className="settings-layout">
-        <section className="settings-card">
-          <div>
-            <h3>Esquema tarifario por minuto y topes</h3>
+      {/* PESTAÑA 1: TARIFAS */}
+      {configTab === "tarifas" && (
+        <div className="settings-layout">
+          <section className="settings-card">
+            <div>
+              <h3>Esquema tarifario por minuto y topes</h3>
+              <p>
+                Los cambios guardados actualizan reactivamente el cálculo de la sesión activa del conductor.
+              </p>
+            </div>
+
+            <div className="tariff-head">
+              <span>Tipo de vehículo</span>
+              <span>Tarifa / min</span>
+              <span>Tope diario</span>
+              <span>Tolerancia gracia</span>
+            </div>
+
+            {/* Automóvil */}
+            <div className="tariff-row">
+              <span>
+                <span className="tariff-icon">
+                  <Icon name="car" size={18} />
+                </span>
+                <strong>Automóvil</strong>
+              </span>
+              <input
+                type="number"
+                value={carRate}
+                onChange={(e) => setCarRate(Number(e.target.value))}
+              />
+              <input
+                type="number"
+                value={carCap}
+                onChange={(e) => setCarCap(Number(e.target.value))}
+              />
+              <input
+                type="number"
+                value={carGrace}
+                onChange={(e) => setCarGrace(Number(e.target.value))}
+              />
+            </div>
+
+            {/* Motocicleta */}
+            <div className="tariff-row">
+              <span>
+                <span className="tariff-icon">
+                  <Icon name="car" size={18} />
+                </span>
+                <strong>Motocicleta</strong>
+              </span>
+              <input
+                type="number"
+                value={motoRate}
+                onChange={(e) => setMotoRate(Number(e.target.value))}
+              />
+              <input
+                type="number"
+                value={motoCap}
+                onChange={(e) => setMotoCap(Number(e.target.value))}
+              />
+              <input
+                type="number"
+                value={motoGrace}
+                onChange={(e) => setMotoGrace(Number(e.target.value))}
+              />
+            </div>
+
+            {/* Vehículo eléctrico */}
+            <div className="tariff-row">
+              <span>
+                <span className="tariff-icon">
+                  <Icon name="car" size={18} />
+                </span>
+                <strong>Vehículo eléctrico (EV)</strong>
+              </span>
+              <input
+                type="number"
+                value={evRate}
+                onChange={(e) => setEvRate(Number(e.target.value))}
+              />
+              <input
+                type="number"
+                value={evCap}
+                onChange={(e) => setEvCap(Number(e.target.value))}
+              />
+              <input
+                type="number"
+                value={evGrace}
+                onChange={(e) => setEvGrace(Number(e.target.value))}
+              />
+            </div>
+
+            <div className="settings-footer">
+              <span>
+                <Icon name="alert" size={17} /> Los cambios se guardan en el store reactivo de demostración.
+              </span>
+              <button className="primary" onClick={handleSaveTariffs}>
+                Guardar cambios <Icon name="check" size={16} />
+              </button>
+            </div>
+          </section>
+
+          <aside className="audit-note">
+            <Icon name="shield" size={24} />
+            <h3>Control de cambios auditado</h3>
             <p>
-              Los cambios guardados actualizan reactivamente el cálculo de la sesión activa del
-              conductor.
+              Toda modificación de tarifas se vincula a tu usuario para auditoría financiera.
             </p>
-          </div>
+            <div>
+              <span>Última modificación guardada</span>
+              <strong>{state.tariffs.updatedBy}</strong>
+              <small>{state.tariffs.lastUpdated}</small>
+            </div>
+            <button className="secondary full" onClick={() => window.print()}>
+              Exportar historial
+            </button>
+          </aside>
+        </div>
+      )}
 
-          <div className="tariff-head">
-            <span>Tipo de vehículo</span>
-            <span>Tarifa / min</span>
-            <span>Tope diario</span>
-            <span>Tolerancia gracia</span>
-          </div>
-
-          {/* Automóvil */}
-          <div className="tariff-row">
-            <span>
-              <span className="tariff-icon">
-                <Icon name="car" size={18} />
-              </span>
-              <strong>Automóvil</strong>
-            </span>
-            <input
-              type="number"
-              value={carRate}
-              onChange={(e) => setCarRate(Number(e.target.value))}
-            />
-            <input
-              type="number"
-              value={carCap}
-              onChange={(e) => setCarCap(Number(e.target.value))}
-            />
-            <input
-              type="number"
-              value={carGrace}
-              onChange={(e) => setCarGrace(Number(e.target.value))}
-            />
-          </div>
-
-          {/* Motocicleta */}
-          <div className="tariff-row">
-            <span>
-              <span className="tariff-icon">
-                <Icon name="car" size={18} />
-              </span>
-              <strong>Motocicleta</strong>
-            </span>
-            <input
-              type="number"
-              value={motoRate}
-              onChange={(e) => setMotoRate(Number(e.target.value))}
-            />
-            <input
-              type="number"
-              value={motoCap}
-              onChange={(e) => setMotoCap(Number(e.target.value))}
-            />
-            <input
-              type="number"
-              value={motoGrace}
-              onChange={(e) => setMotoGrace(Number(e.target.value))}
-            />
-          </div>
-
-          {/* Vehículo eléctrico */}
-          <div className="tariff-row">
-            <span>
-              <span className="tariff-icon">
-                <Icon name="car" size={18} />
-              </span>
-              <strong>Vehículo eléctrico (EV)</strong>
-            </span>
-            <input
-              type="number"
-              value={evRate}
-              onChange={(e) => setEvRate(Number(e.target.value))}
-            />
-            <input
-              type="number"
-              value={evCap}
-              onChange={(e) => setEvCap(Number(e.target.value))}
-            />
-            <input
-              type="number"
-              value={evGrace}
-              onChange={(e) => setEvGrace(Number(e.target.value))}
-            />
-          </div>
-
-          <div className="settings-footer">
-            <span>
-              <Icon name="alert" size={17} /> Los cambios se guardan en el store reactivo de
-              demostración.
-            </span>
-            <button className="primary" onClick={handleSaveTariffs}>
-              Guardar cambios <Icon name="check" size={16} />
+      {/* PESTAÑA 2: TIPOS DE VEHÍCULO */}
+      {configTab === "vehiculos" && (
+        <section className="table-card" style={{ padding: 22 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 18 }}>Clasificación Vehicular y Tolerancias</h3>
+              <p style={{ margin: "4px 0 0", fontSize: 13, color: "#6b7280" }}>
+                Habilita tipos de vehículos admitidos en el parqueadero y define recargos o cortesías.
+              </p>
+            </div>
+            <button className="primary" onClick={handleSaveVehicles}>
+              Guardar Clasificación <Icon name="check" size={16} />
             </button>
           </div>
-        </section>
 
-        <aside className="audit-note">
-          <Icon name="shield" size={24} />
-          <h3>Control de cambios auditado</h3>
-          <p>
-            Toda modificación de tarifas se vincula a tu usuario para auditoría financiera.
-          </p>
-          <div>
-            <span>Última modificación guardada</span>
-            <strong>{state.tariffs.updatedBy}</strong>
-            <small>{state.tariffs.lastUpdated}</small>
+          <div className="data-table">
+            <div className="tr th" style={{ gridTemplateColumns: "1.5fr 1fr 1fr 1fr" }}>
+              <span>Categoría Vehicular</span>
+              <span>Estado en Portería</span>
+              <span>Ajuste Tarifario (%)</span>
+              <span>Minutos de Gracia</span>
+            </div>
+            {vehiclesConfig.map((v) => (
+              <div key={v.id} className="tr" style={{ gridTemplateColumns: "1.5fr 1fr 1fr 1fr", alignItems: "center" }}>
+                <span>
+                  <strong>{v.name}</strong>
+                </span>
+                <span>
+                  <button
+                    type="button"
+                    className="secondary compact"
+                    style={{
+                      background: v.enabled ? "#ecfdf5" : "#fef2f2",
+                      borderColor: v.enabled ? "#a7f3d0" : "#fecaca",
+                      color: v.enabled ? "#065f46" : "#991b1b",
+                      fontWeight: 700,
+                    }}
+                    onClick={() => {
+                      setVehiclesConfig((prev) =>
+                        prev.map((item) => (item.id === v.id ? { ...item, enabled: !item.enabled } : item))
+                      );
+                    }}
+                  >
+                    {v.enabled ? "● Permitido" : "○ Bloqueado"}
+                  </button>
+                </span>
+                <span>
+                  <input
+                    type="number"
+                    value={v.surcharge}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      setVehiclesConfig((prev) =>
+                        prev.map((item) => (item.id === v.id ? { ...item, surcharge: val } : item))
+                      );
+                    }}
+                    style={{ width: 80, height: 32, padding: "0 8px", borderRadius: 6, border: "1px solid #d1d5db" }}
+                  />
+                  {" %"}
+                </span>
+                <span>
+                  <input
+                    type="number"
+                    value={v.graceMin}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      setVehiclesConfig((prev) =>
+                        prev.map((item) => (item.id === v.id ? { ...item, graceMin: val } : item))
+                      );
+                    }}
+                    style={{ width: 70, height: 32, padding: "0 8px", borderRadius: 6, border: "1px solid #d1d5db" }}
+                  />
+                  {" min"}
+                </span>
+              </div>
+            ))}
           </div>
-          <button className="secondary full" onClick={() => window.print()}>
-            Exportar historial
-          </button>
-        </aside>
-      </div>
+        </section>
+      )}
+
+      {/* PESTAÑA 3: ZONAS Y CAPACIDAD */}
+      {configTab === "capacidad" && (
+        <section className="table-card" style={{ padding: 22 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 18 }}>Aforo por Zonas y Umbrales de Alerta</h3>
+              <p style={{ margin: "4px 0 0", fontSize: 13, color: "#6b7280" }}>
+                Configuración del cupo máximo por nivel y porcentaje para disparar alerta de saturación.
+              </p>
+            </div>
+            <button className="primary" onClick={handleSaveCapacity}>
+              Guardar Aforo <Icon name="check" size={16} />
+            </button>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 20 }}>
+            <div style={{ background: "#f8fafc", padding: 16, borderRadius: 10, border: "1px solid #e2e8f0" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                <strong>Piso 1 (Nivel Calle)</strong>
+                <Badge tone="green">Activo</Badge>
+              </div>
+              <label style={{ display: "block", fontSize: 12, color: "#64748b", marginBottom: 6 }}>Cupo de bahías:</label>
+              <input
+                type="number"
+                value={floor1Cap}
+                onChange={(e) => setFloor1Cap(Number(e.target.value))}
+                style={{ width: "100%", height: 38, borderRadius: 6, border: "1px solid #cbd5e1", padding: "0 10px", fontWeight: 700 }}
+              />
+              <small style={{ color: "#64748b", display: "block", marginTop: 6 }}>Automóviles y PMR</small>
+            </div>
+
+            <div style={{ background: "#f8fafc", padding: 16, borderRadius: 10, border: "1px solid #e2e8f0" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                <strong>Piso 2 (Sótano 1)</strong>
+                <Badge tone="green">Activo</Badge>
+              </div>
+              <label style={{ display: "block", fontSize: 12, color: "#64748b", marginBottom: 6 }}>Cupo de bahías:</label>
+              <input
+                type="number"
+                value={floor2Cap}
+                onChange={(e) => setFloor2Cap(Number(e.target.value))}
+                style={{ width: "100%", height: 38, borderRadius: 6, border: "1px solid #cbd5e1", padding: "0 10px", fontWeight: 700 }}
+              />
+              <small style={{ color: "#64748b", display: "block", marginTop: 6 }}>Bahías Eléctricas y Motos</small>
+            </div>
+
+            <div style={{ background: "#f8fafc", padding: 16, borderRadius: 10, border: "1px solid #e2e8f0" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                <strong>Piso 3 (Sótano 2)</strong>
+                <Badge tone="green">Activo</Badge>
+              </div>
+              <label style={{ display: "block", fontSize: 12, color: "#64748b", marginBottom: 6 }}>Cupo de bahías:</label>
+              <input
+                type="number"
+                value={floor3Cap}
+                onChange={(e) => setFloor3Cap(Number(e.target.value))}
+                style={{ width: "100%", height: 38, borderRadius: 6, border: "1px solid #cbd5e1", padding: "0 10px", fontWeight: 700 }}
+              />
+              <small style={{ color: "#64748b", display: "block", marginTop: 6 }}>Larga estancia y rotación</small>
+            </div>
+          </div>
+
+          <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", padding: 14, borderRadius: 10 }}>
+            <label style={{ display: "block", fontWeight: 700, fontSize: 13, color: "#1e40af", marginBottom: 6 }}>
+              Umbral para Alerta de Saturación (Visual y Acústica): {saturationThreshold}%
+            </label>
+            <input
+              type="range"
+              min="70"
+              max="98"
+              value={saturationThreshold}
+              onChange={(e) => setSaturationThreshold(Number(e.target.value))}
+              style={{ width: "100%", accentColor: "#169db3" }}
+            />
+            <small style={{ color: "#1e40af" }}>
+              Al superar el {saturationThreshold}% de ocupación total, el dashboard activará advertencias en tiempo real.
+            </small>
+          </div>
+        </section>
+      )}
+
+      {/* PESTAÑA 4: USUARIOS Y PERMISOS */}
+      {configTab === "usuarios" && (
+        <section className="table-card" style={{ padding: 22 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 18 }}>Personal de Operación y Roles</h3>
+              <p style={{ margin: "4px 0 0", fontSize: 13, color: "#6b7280" }}>
+                Gestión de credenciales de operadores de garita, supervisores y auditores del sistema.
+              </p>
+            </div>
+            <button
+              className="primary"
+              onClick={() => {
+                setToastMsg("Modal de creación de nuevo operador abierto.");
+                setTimeout(() => setToastMsg(null), 3000);
+              }}
+            >
+              <Icon name="plus" size={16} /> Crear Operador
+            </button>
+          </div>
+
+          <div className="data-table">
+            <div className="tr th" style={{ gridTemplateColumns: "1.2fr 1fr 1.2fr 1fr 1fr" }}>
+              <span>Nombre Operador</span>
+              <span>Rol / Perfil</span>
+              <span>Jornada Asignada</span>
+              <span>Punto Físico</span>
+              <span>Acciones</span>
+            </div>
+            {staffUsers.map((u) => (
+              <div key={u.id} className="tr" style={{ gridTemplateColumns: "1.2fr 1fr 1.2fr 1fr 1fr", alignItems: "center" }}>
+                <span>
+                  <strong>{u.name}</strong>
+                </span>
+                <span>
+                  <Badge tone={u.role.includes("Supervisor") ? "critical" : u.role.includes("Auditor") ? "pending" : "green"}>
+                    {u.role}
+                  </Badge>
+                </span>
+                <span>{u.shift}</span>
+                <span>{u.station}</span>
+                <span>
+                  <button
+                    type="button"
+                    className="secondary compact"
+                    style={{ fontSize: 12 }}
+                    onClick={() => {
+                      setToastMsg(`Permisos y credenciales editados para ${u.name}.`);
+                      setTimeout(() => setToastMsg(null), 3500);
+                    }}
+                  >
+                    Editar
+                  </button>
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {saved && (
         <div className="toast">
@@ -2178,7 +2873,10 @@ const driverNav = [
 
 const adminNav = [
   { id: "dashboard", label: "Dashboard", icon: "grid" as const },
+  { id: "caja", label: "Caja y POS", icon: "card" as const },
   { id: "talanqueras", label: "Talanqueras", icon: "gate" as const },
+  { id: "patio", label: "Patio y Bahías", icon: "car" as const },
+  { id: "turnos", label: "Turnos y Arqueo", icon: "clock" as const },
   { id: "reportes", label: "Reportes", icon: "report" as const },
   { id: "configuracion", label: "Configuración", icon: "settings" as const },
 ];
@@ -2186,13 +2884,50 @@ const adminNav = [
 export default function App() {
   const [state, actions] = useParkiaStore();
   const [adminPage, setAdminPage] = useState<string>("dashboard");
+  const [showBranchModal, setShowBranchModal] = useState(false);
+  const [selectedBranch, setSelectedBranch] = useState({
+    name: "Parking Central",
+    address: "Calle 93 · Bogotá",
+    freeSpots: 42,
+    totalSpots: 120,
+  });
+  const [branchToast, setBranchToast] = useState<string | null>(null);
+
+  const branches = [
+    { name: "Parking Central", address: "Calle 93 · Bogotá", freeSpots: 42, totalSpots: 120 },
+    { name: "Parking Zona T", address: "Calle 82 # 12-18 · Bogotá", freeSpots: 18, totalSpots: 80 },
+    { name: "Parking Salitre", address: "Av. El Dorado # 68C-20 · Bogotá", freeSpots: 65, totalSpots: 150 },
+    { name: "Parking Centro Internacional", address: "Cra 7 # 32-16 · Bogotá", freeSpots: 29, totalSpots: 100 },
+  ];
+
+  const role = state.currentUser?.role;
+
+  // Atajos de teclado rápidos para monitor de escritorio
+  useEffect(() => {
+    if (role !== "admin") return;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "F1" || e.key === "F2") {
+        e.preventDefault();
+        setAdminPage("caja");
+      } else if (e.key === "F6" || e.key === "F7") {
+        e.preventDefault();
+        setAdminPage("talanqueras");
+      } else if (e.key === "F9") {
+        e.preventDefault();
+        setAdminPage("talanqueras");
+      } else if (e.key === "F12") {
+        e.preventDefault();
+        setAdminPage("turnos");
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [role]);
 
   // Si no hay usuario autenticado, renderizar la pantalla de Login y Registro (Flujo A0)
   if (!state.currentUser) {
     return <AuthScreen />;
   }
-
-  const role = state.currentUser.role;
 
   const switchRole = (newRole: "driver" | "admin") => {
     actions.loginDemo(newRole);
@@ -2223,7 +2958,10 @@ export default function App() {
   // ── APARTADO 2: OPERARIOS (CONSOLA DE MANDO Y CONTROL DE ESCRITORIO) ──
   const adminContent: Record<string, React.ReactNode> = {
     dashboard: <AdminDashboard go={setAdminPage} />,
+    caja: <CashierDesk />,
     talanqueras: <Gates />,
+    patio: <YardControl onGoToCashier={() => setAdminPage("caja")} />,
+    turnos: <ShiftManager />,
     reportes: <Reports />,
     configuracion: <Settings />,
   };
@@ -2237,13 +2975,17 @@ export default function App() {
         </button>
         <div className="site-select">
           <span>SEDE ACTUAL</span>
-          <button>
+          <button
+            type="button"
+            onClick={() => setShowBranchModal(true)}
+            title="Clic para cambiar de sede operativa"
+          >
             <i>
               <Icon name="grid" size={17} />
             </i>
             <div>
-              <strong>Parking Central</strong>
-              <small>Calle 93 · Bogotá</small>
+              <strong>{selectedBranch.name}</strong>
+              <small>{selectedBranch.address}</small>
             </div>
             <Icon name="chevron" size={15} />
           </button>
@@ -2299,6 +3041,26 @@ export default function App() {
 
       <div className="content">{adminContent[adminPage] || adminContent.dashboard}</div>
 
+      {/* Barra de Atajos Rápidos de Monitor (Fast-Lane Hotkeys) */}
+      <footer className="hotkeys-bar" aria-label="Atajos de teclado para monitor">
+        <span>Atajos de Garita:</span>
+        <button type="button" onClick={() => setAdminPage("caja")}>
+          <kbd>F1</kbd> Ingreso Asistido
+        </button>
+        <button type="button" onClick={() => setAdminPage("caja")}>
+          <kbd>F2</kbd> Cobro Ventanilla POS
+        </button>
+        <button type="button" onClick={() => setAdminPage("talanqueras")}>
+          <kbd>F6</kbd> Talanqueras
+        </button>
+        <button type="button" onClick={() => setAdminPage("talanqueras")}>
+          <kbd>F9</kbd> Ticket Extraviado
+        </button>
+        <button type="button" onClick={() => setAdminPage("turnos")}>
+          <kbd>F12</kbd> Arqueo / Turnos
+        </button>
+      </footer>
+
       {/* Botón Flotante de Demostración Reactiva */}
       <aside className="floating-demo-bar" aria-label="Controles de demostración">
         <span className="live-dot" />
@@ -2312,6 +3074,74 @@ export default function App() {
           <Icon name="refresh" size={13} /> Reiniciar datos demo
         </button>
       </aside>
+
+      {/* Modal de Cambio de Sede Operativa */}
+      {showBranchModal && (
+        <Modal title="Cambiar Sede Operativa" onClose={() => setShowBranchModal(false)}>
+          <p style={{ margin: "0 0 16px", fontSize: 13, color: "#64748b" }}>
+            Selecciona la sede del parqueadero para cambiar la telemetría, asignación de garita y bahías de monitoreo.
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {branches.map((b) => {
+              const isCurrent = b.name === selectedBranch.name;
+              return (
+                <div
+                  key={b.name}
+                  onClick={() => {
+                    setSelectedBranch(b);
+                    setShowBranchModal(false);
+                    setBranchToast(`Sede cambiada a: ${b.name} (${b.address}).`);
+                    setTimeout(() => setBranchToast(null), 3500);
+                  }}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "12px 16px",
+                    borderRadius: 10,
+                    border: `1.5px solid ${isCurrent ? "#169db3" : "#e2e8f0"}`,
+                    background: isCurrent ? "#f0fdfa" : "#ffffff",
+                    cursor: "pointer",
+                    transition: "all 150ms ease",
+                  }}
+                >
+                  <div>
+                    <strong style={{ display: "block", fontSize: 14, color: isCurrent ? "#0d766e" : "#0f172a" }}>
+                      {b.name}
+                    </strong>
+                    <small style={{ color: "#64748b" }}>{b.address}</small>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <Badge tone={isCurrent ? "green" : "pending"}>
+                      {isCurrent ? "Sede Activa" : `${b.freeSpots} Libres`}
+                    </Badge>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="modal-actions" style={{ marginTop: 18 }}>
+            <button className="secondary full" onClick={() => setShowBranchModal(false)}>
+              Cerrar
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {branchToast && (
+        <div className="toast" style={{ top: 90, bottom: "auto", background: "#0d766e" }}>
+          <span>
+            <Icon name="check" size={16} />
+          </span>
+          <div>
+            <strong>Sede Sincronizada</strong>
+            <small>{branchToast}</small>
+          </div>
+          <button onClick={() => setBranchToast(null)}>
+            <Icon name="close" size={14} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
