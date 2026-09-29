@@ -1,7 +1,47 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParkiaStore, ParkingSpot, ParkingHistoryItem } from "../store/parkiaStore";
 import { Icon, Badge } from "./Icon";
 import { PaymentModal } from "./PaymentModal";
+
+// ── Smooth Counter for currency ──
+function SmoothCounter({ value, formatValue }: { value: number; formatValue: (v: number) => string }) {
+  const [displayValue, setDisplayValue] = useState(value);
+  const animationRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    // If it's a huge jump (e.g., initial load), just snap
+    if (Math.abs(value - displayValue) > value * 0.5) {
+      setDisplayValue(value);
+      return;
+    }
+    
+    const start = displayValue;
+    const end = value;
+    const duration = 1000; // animate over 1s
+    const startTime = performance.now();
+
+    function step(currentTime: number) {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // easeOutCubic
+      const ease = 1 - Math.pow(1 - progress, 3);
+      setDisplayValue(start + (end - start) * ease);
+
+      if (progress < 1) {
+        animationRef.current = requestAnimationFrame(step);
+      }
+    }
+
+    if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    animationRef.current = requestAnimationFrame(step);
+
+    return () => {
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    };
+  }, [value]);
+
+  return <>{formatValue(displayValue)}</>;
+}
 
 export function MobileDriverApp({
   onSwitchToAdmin,
@@ -9,13 +49,14 @@ export function MobileDriverApp({
   onSwitchToAdmin: () => void;
 }) {
   const [state, actions] = useParkiaStore();
-  const [tab, setTab] = useState<"inicio" | "mapa" | "vehiculos" | "pagos">("inicio");
+  const [tab, setTab] = useState<"inicio" | "mapa" | "vehiculos" | "pagos" | "perfil">("inicio");
   const [fullscreen, setFullscreen] = useState(false);
 
   // Bottom Sheets states
   const [selectedSpot, setSelectedSpot] = useState<ParkingSpot | null>(null);
   const [payingSession, setPayingSession] = useState<ParkingHistoryItem | null>(null);
   const [addVehicleSheet, setAddVehicleSheet] = useState(false);
+  const [editProfileSheet, setEditProfileSheet] = useState(false);
   const [vehicleSelectorSheet, setVehicleSelectorSheet] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -24,6 +65,12 @@ export function MobileDriverApp({
   const [newType, setNewType] = useState<"Automóvil" | "Motocicleta" | "Eléctrico">("Automóvil");
   const [newBrand, setNewBrand] = useState("");
   const [newModel, setNewModel] = useState("");
+
+  // Profile edit form
+  const [profileName, setProfileName] = useState("");
+  const [profileEmail, setProfileEmail] = useState("");
+  const [profileDocument, setProfileDocument] = useState("");
+  const [profilePhone, setProfilePhone] = useState("");
 
   // Map floor selection
   const [mapFloor, setMapFloor] = useState<"Piso 1" | "Piso 2" | "Piso 3">("Piso 2");
@@ -76,9 +123,32 @@ export function MobileDriverApp({
     setAddVehicleSheet(false);
   }
 
-  // Active session timer math
+  function openEditProfile() {
+    setProfileName(currentUser?.name || "");
+    setProfileEmail(currentUser?.email || "");
+    setProfileDocument(currentUser?.documentId || "");
+    setProfilePhone(currentUser?.phone || "");
+    setEditProfileSheet(true);
+  }
+
+  function handleSaveProfile(e: React.FormEvent) {
+    e.preventDefault();
+    if (!profileName.trim() || !profileEmail.trim()) return;
+
+    actions.updateProfile({
+      name: profileName,
+      email: profileEmail,
+      documentId: profileDocument,
+      phone: profilePhone,
+    });
+    showToast("Perfil actualizado correctamente.");
+    setEditProfileSheet(false);
+  }
+
+  // ── Session timer math (updates on store tick, which represents 1 minute) ──
   const elapsedMin = activeSession?.elapsedMinutes || 138;
-  const sessionCost = activeSession?.totalCost || 8970;
+  const targetSessionCost = activeSession?.totalCost || 8970;
+  
   const hours = Math.floor(elapsedMin / 60);
   const minutes = elapsedMin % 60;
   const timeFormatted = `${String(hours).padStart(2, "0")} h ${String(minutes).padStart(2, "0")} min`;
@@ -137,13 +207,20 @@ export function MobileDriverApp({
         <div className="phone-screen">
           {/* Header Móvil con Selector Rápido de Vehículo */}
           <header className="mobile-header">
-            <div className="mobile-header-user">
+            <button
+              type="button"
+              className="mobile-header-user"
+              onClick={() => setTab("perfil")}
+              title="Ver perfil y configuración"
+              aria-label="Abrir perfil y configuración"
+              aria-current={tab === "perfil" ? "page" : undefined}
+            >
               <span className="avatar small">{currentUser?.avatarText || "CM"}</span>
               <div>
                 <small>Hola, {currentUser?.name.split(" ")[0] || "Carlos"}</small>
                 <strong>Parking Central</strong>
               </div>
-            </div>
+            </button>
 
             {primaryVehicle && (
               <button
@@ -209,7 +286,9 @@ export function MobileDriverApp({
                   </div>
                   <div className="mobile-session-metric cost">
                     <span>Costo acumulado</span>
-                    <strong>{currencyFmt.format(sessionCost)}</strong>
+                    <strong>
+                      <SmoothCounter value={targetSessionCost} formatValue={(v) => currencyFmt.format(v)} />
+                    </strong>
                     <small style={{ fontSize: 9, color: "#0d766e" }}>
                       Tarifa: ${currentRate} / min
                     </small>
@@ -282,7 +361,7 @@ export function MobileDriverApp({
           {tab === "mapa" && (
             <div className="mobile-page-content">
               {/* Selector de Piso deslizable */}
-              <div className="segmented" style={{ width: "100%" }}>
+              <div className="segmented floors" style={{ width: "100%" }}>
                 {(["Piso 1", "Piso 2", "Piso 3"] as const).map((f) => {
                   const free = state.spots.filter((s) => s.floor === f && s.state === "free").length;
                   return (
@@ -432,32 +511,83 @@ export function MobileDriverApp({
                   </div>
                 ))}
               </div>
+            </div>
+          )}
 
-              {/* Perfil del conductor */}
-              <div
-                style={{
-                  background: "#ffffff",
-                  borderRadius: 14,
-                  padding: 16,
-                  border: "1px solid #e1e7e5",
-                  marginTop: 6,
-                }}
-              >
-                <h4 style={{ margin: "0 0 10px", fontSize: 14 }}>Perfil del Conductor</h4>
-                <div style={{ fontSize: 11, color: "#60726f", display: "flex", flexDirection: "column", gap: 6 }}>
-                  <div><strong>Nombre:</strong> {currentUser?.name}</div>
-                  <div><strong>Documento:</strong> {currentUser?.documentId || "CC 1.023.492.892"}</div>
-                  <div><strong>Celular:</strong> {currentUser?.phone || "+57 310 849 2048"}</div>
+          {/* ════ TAB: PERFIL Y CONFIGURACIÓN ════ */}
+          {tab === "perfil" && (
+            <div className="mobile-page-content">
+              <h3 style={{ margin: 0, fontSize: 17 }}>Perfil y configuración</h3>
+
+              <section className="mobile-profile-settings">
+                <div className="mobile-profile-summary">
+                  <span className="avatar">{currentUser?.avatarText || "CM"}</span>
+                  <div>
+                    <strong>{currentUser?.name || "Carlos Martínez"}</strong>
+                    <small>{currentUser?.email || "carlos.martinez@email.com"}</small>
+                  </div>
+                  <button
+                    type="button"
+                    className="secondary compact"
+                    onClick={openEditProfile}
+                    aria-label="Editar perfil"
+                  >
+                    <Icon name="edit" size={14} /> Editar
+                  </button>
+                </div>
+
+                <div className="profile-row">
+                  <Icon name="card" size={18} />
+                  <div>
+                    <span>Documento de Identidad</span>
+                    <strong>{currentUser?.documentId || "CC 1.023.492.892"}</strong>
+                  </div>
+                </div>
+                <div className="profile-row">
+                  <Icon name="user" size={18} />
+                  <div>
+                    <span>Correo electrónico</span>
+                    <strong>{currentUser?.email || "carlos.martinez@email.com"}</strong>
+                  </div>
+                </div>
+                <div className="profile-row">
+                  <Icon name="bell" size={18} />
+                  <div>
+                    <span>Teléfono celular</span>
+                    <strong>{currentUser?.phone || "+57 310 849 2048"}</strong>
+                  </div>
+                </div>
+
+                <div className="preference">
+                  <div>
+                    <strong>Notificaciones de salida</strong>
+                    <small>Alertas de tiempo transcurrido y tarifa</small>
+                  </div>
+                  <span
+                    className={`toggle ${state.notificationsEnabled ? "on" : ""}`}
+                    onClick={() => actions.toggleNotifications()}
+                    role="switch"
+                    aria-checked={state.notificationsEnabled}
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        actions.toggleNotifications();
+                      }
+                    }}
+                    style={{ cursor: "pointer" }}
+                  >
+                    <i />
+                  </span>
                 </div>
 
                 <button
                   className="secondary full"
-                  style={{ marginTop: 14 }}
                   onClick={() => actions.logout()}
                 >
                   <Icon name="logout" size={16} /> Cerrar Sesión
                 </button>
-              </div>
+              </section>
             </div>
           )}
 
@@ -568,6 +698,15 @@ export function MobileDriverApp({
             <Icon name="card" size={20} />
             <span>Pagos</span>
             {tab === "pagos" && <span className="mobile-nav-dot" />}
+          </button>
+          <button
+            type="button"
+            className={`mobile-nav-btn ${tab === "perfil" ? "active" : ""}`}
+            onClick={() => setTab("perfil")}
+          >
+            <Icon name="user" size={20} />
+            <span>Perfil</span>
+            {tab === "perfil" && <span className="mobile-nav-dot" />}
           </button>
         </nav>
 
@@ -725,6 +864,71 @@ export function MobileDriverApp({
 
                 <button type="submit" className="primary sheet-cta-btn" style={{ marginTop: 8 }}>
                   <Icon name="check" size={18} /> Guardar vehículo
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ════ BOTTOM SHEET: EDITAR PERFIL ════ */}
+        {editProfileSheet && (
+          <div className="bottom-sheet-backdrop" onClick={() => setEditProfileSheet(false)}>
+            <div className="bottom-sheet" onClick={(e) => e.stopPropagation()}>
+              <div className="sheet-handle-bar" />
+              <div className="sheet-header">
+                <h3>Editar perfil</h3>
+                <button className="icon-btn" onClick={() => setEditProfileSheet(false)}>
+                  <Icon name="close" size={16} />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveProfile} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: "#556764", display: "flex", flexDirection: "column", gap: 4 }}>
+                  Nombre completo *
+                  <input
+                    placeholder="Ej. Carlos Martínez"
+                    value={profileName}
+                    onChange={(e) => setProfileName(e.target.value)}
+                    style={{ height: 46, borderRadius: 10, border: "1px solid #d3dedb", padding: "0 12px", fontSize: 15 }}
+                    required
+                  />
+                </label>
+
+                <label style={{ fontSize: 11, fontWeight: 700, color: "#556764", display: "flex", flexDirection: "column", gap: 4 }}>
+                  Correo electrónico *
+                  <input
+                    type="email"
+                    placeholder="Ej. carlos.martinez@email.com"
+                    value={profileEmail}
+                    onChange={(e) => setProfileEmail(e.target.value)}
+                    style={{ height: 46, borderRadius: 10, border: "1px solid #d3dedb", padding: "0 12px", fontSize: 15 }}
+                    required
+                  />
+                </label>
+
+                <label style={{ fontSize: 11, fontWeight: 700, color: "#556764", display: "flex", flexDirection: "column", gap: 4 }}>
+                  Documento de identidad
+                  <input
+                    placeholder="Ej. CC 1.023.492.892"
+                    value={profileDocument}
+                    onChange={(e) => setProfileDocument(e.target.value)}
+                    style={{ height: 46, borderRadius: 10, border: "1px solid #d3dedb", padding: "0 12px", fontSize: 15 }}
+                  />
+                </label>
+
+                <label style={{ fontSize: 11, fontWeight: 700, color: "#556764", display: "flex", flexDirection: "column", gap: 4 }}>
+                  Teléfono celular
+                  <input
+                    type="tel"
+                    placeholder="Ej. +57 310 849 2048"
+                    value={profilePhone}
+                    onChange={(e) => setProfilePhone(e.target.value)}
+                    style={{ height: 46, borderRadius: 10, border: "1px solid #d3dedb", padding: "0 12px", fontSize: 15 }}
+                  />
+                </label>
+
+                <button type="submit" className="primary sheet-cta-btn" style={{ marginTop: 8 }}>
+                  <Icon name="check" size={18} /> Guardar cambios
                 </button>
               </form>
             </div>

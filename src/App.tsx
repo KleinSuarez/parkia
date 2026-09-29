@@ -525,7 +525,7 @@ function AvailabilityMap() {
       )}
 
       <div className="map-toolbar">
-        <div className="segmented">
+        <div className="segmented floors">
           {(["Piso 1", "Piso 2", "Piso 3"] as const).map((f) => {
             const count = state.spots.filter((s) => s.floor === f && s.state === "free").length;
             return (
@@ -625,8 +625,8 @@ function AvailabilityMap() {
                   {s.state === "free"
                     ? "Libre"
                     : s.state === "occupied"
-                    ? "Ocupado"
-                    : "Reservado"}
+                      ? "Ocupado"
+                      : "Reservado"}
                 </span>
                 <strong>{s.id}</strong>
                 {s.state === "occupied" && <Icon name="car" size={24} />}
@@ -703,8 +703,8 @@ function AvailabilityMap() {
                   selectedSpot.state === "free"
                     ? "check"
                     : selectedSpot.state === "occupied"
-                    ? "close"
-                    : "clock"
+                      ? "close"
+                      : "clock"
                 }
                 size={28}
               />
@@ -713,8 +713,8 @@ function AvailabilityMap() {
               {selectedSpot.state === "free"
                 ? "Bahía disponible para reserva"
                 : selectedSpot.state === "occupied"
-                ? "Bahía ocupada actualmente"
-                : "Bahía reservada"}
+                  ? "Bahía ocupada actualmente"
+                  : "Bahía reservada"}
             </h3>
             <p>
               Ubicada en {selectedSpot.floor}, {selectedSpot.zone}. A {selectedSpot.distanceElevator}{" "}
@@ -730,8 +730,8 @@ function AvailabilityMap() {
                 {selectedSpot.state === "free"
                   ? "Libre"
                   : selectedSpot.state === "occupied"
-                  ? "Ocupado"
-                  : "Reservado"}
+                    ? "Ocupado"
+                    : "Reservado"}
               </strong>
             </div>
             <div className="apd-detail">
@@ -740,8 +740,8 @@ function AvailabilityMap() {
                 {selectedSpot.type === "pmr"
                   ? "Accesible PMR"
                   : selectedSpot.type === "ev"
-                  ? "Eléctrico EV"
-                  : "Automóvil"}
+                    ? "Eléctrico EV"
+                    : "Automóvil"}
               </strong>
             </div>
             <div className="apd-detail">
@@ -779,6 +779,7 @@ function AvailabilityMap() {
 function Vehicles() {
   const [state, actions] = useParkiaStore();
   const [addModal, setAddModal] = useState(false);
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(state.vehicles[0]?.id || null);
 
   // Form state
@@ -789,7 +790,40 @@ function Vehicles() {
   const [color, setColor] = useState("");
   const [year, setYear] = useState("2024");
 
+  // Profile edit form
+  const [profileName, setProfileName] = useState("");
+  const [profileEmail, setProfileEmail] = useState("");
+  const [profileDocument, setProfileDocument] = useState("");
+  const [profilePhone, setProfilePhone] = useState("");
+
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastTitle, setToastTitle] = useState("Gestión de Vehículos");
+
+  function openEditProfile() {
+    const user = state.currentUser;
+    setProfileName(user?.name || "");
+    setProfileEmail(user?.email || "");
+    setProfileDocument(user?.documentId || "");
+    setProfilePhone(user?.phone || "");
+    setEditProfileOpen(true);
+  }
+
+  function handleSaveProfile(e: React.FormEvent) {
+    e.preventDefault();
+    if (!profileName.trim() || !profileEmail.trim()) return;
+
+    actions.updateProfile({
+      name: profileName,
+      email: profileEmail,
+      documentId: profileDocument,
+      phone: profilePhone,
+    });
+
+    setToastTitle("Perfil actualizado");
+    setToastMessage("Tus datos de conductor se guardaron correctamente.");
+    setEditProfileOpen(false);
+    setTimeout(() => setToastMessage(null), 3500);
+  }
 
   function handleSaveVehicle(e: React.FormEvent) {
     e.preventDefault();
@@ -804,6 +838,7 @@ function Vehicles() {
       year: year.trim() || "2024",
     });
 
+    setToastTitle("Gestión de Vehículos");
     setToastMessage(`Vehículo ${plate.toUpperCase()} registrado con éxito.`);
     setAddModal(false);
     setPlate("");
@@ -828,7 +863,7 @@ function Vehicles() {
             <Icon name="check" size={16} />
           </span>
           <div>
-            <strong>Gestión de Vehículos</strong>
+            <strong>{toastTitle}</strong>
             <small>{toastMessage}</small>
           </div>
           <button onClick={() => setToastMessage(null)}>
@@ -935,7 +970,12 @@ function Vehicles() {
               <h3>{currentUser?.name || "Carlos Martínez"}</h3>
               <p>Conductor registrado · Sede Bogotá</p>
             </div>
-            <button className="icon-btn" title="Editar perfil" aria-label="Editar perfil">
+            <button
+              className="icon-btn"
+              title="Editar perfil"
+              aria-label="Editar perfil"
+              onClick={openEditProfile}
+            >
               <Icon name="edit" />
             </button>
           </div>
@@ -1054,6 +1094,67 @@ function Vehicles() {
               </button>
               <button type="submit" className="primary">
                 Guardar vehículo <Icon name="check" size={16} />
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {editProfileOpen && (
+        <Modal title="Editar perfil de conductor" onClose={() => setEditProfileOpen(false)}>
+          <form onSubmit={handleSaveProfile}>
+            <div className="form-grid">
+              <label>
+                Nombre completo *
+                <input
+                  placeholder="Ej. Carlos Martínez"
+                  value={profileName}
+                  onChange={(e) => setProfileName(e.target.value)}
+                  required
+                />
+              </label>
+              <label>
+                Correo electrónico *
+                <input
+                  type="email"
+                  placeholder="Ej. carlos.martinez@email.com"
+                  value={profileEmail}
+                  onChange={(e) => setProfileEmail(e.target.value)}
+                  required
+                />
+              </label>
+            </div>
+
+            <div className="form-grid">
+              <label>
+                Documento de identidad
+                <input
+                  placeholder="Ej. CC 1.023.492.892"
+                  value={profileDocument}
+                  onChange={(e) => setProfileDocument(e.target.value)}
+                />
+              </label>
+              <label>
+                Teléfono celular
+                <input
+                  type="tel"
+                  placeholder="Ej. +57 310 849 2048"
+                  value={profilePhone}
+                  onChange={(e) => setProfilePhone(e.target.value)}
+                />
+              </label>
+            </div>
+
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => setEditProfileOpen(false)}
+              >
+                Cancelar
+              </button>
+              <button type="submit" className="primary">
+                Guardar cambios <Icon name="check" size={16} />
               </button>
             </div>
           </form>
@@ -1205,8 +1306,8 @@ function History() {
                   {r.status === "paid"
                     ? "Pagado"
                     : r.status === "active"
-                    ? "En curso"
-                    : "Pendiente"}
+                      ? "En curso"
+                      : "Pendiente"}
                 </Badge>
               </span>
               <span>
