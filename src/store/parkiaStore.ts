@@ -101,6 +101,73 @@ export interface SystemAlert {
   timestamp: string;
 }
 
+export interface ShiftSession {
+  isOpen: boolean;
+  shiftName: string;
+  operatorName: string;
+  operatorCode: string;
+  stationName: string;
+  baseCash: number;
+  openedAt: string;
+  peripherals: {
+    lprNorth: "online" | "warning" | "offline";
+    lprSouth: "online" | "warning" | "offline";
+    barrierNorth: "online" | "warning" | "offline";
+    barrierSouth: "online" | "warning" | "offline";
+    printer: "online" | "warning" | "offline";
+    cashDrawer: "online" | "warning" | "offline";
+  };
+  lastZCut?: {
+    closedAt: string;
+    operator: string;
+    countedCash: number;
+    systemCash: number;
+    cashDiff: number;
+    countedVouchers: number;
+    systemVouchers: number;
+    digitalTotal: number;
+    grandTotal: number;
+    notes: string;
+  };
+}
+
+export interface ParkedVehicleSession {
+  id: string;
+  plate: string;
+  vehicleType: "car" | "motorcycle" | "pmr" | "ev";
+  brand: string;
+  color: string;
+  entryTime: string;
+  entryTimestamp: number;
+  accessGate: string;
+  spotCode: string;
+  floor: "Piso 1" | "Piso 2" | "Piso 3";
+  status: "active" | "paid" | "completed";
+  paidAt?: string;
+  paidAmount?: number;
+  paymentMethod?: string;
+  gracePeriodExpiresAt?: number;
+  ticketCode: string;
+}
+
+export interface LprCapture {
+  id: string;
+  plate: string;
+  time: string;
+  date: string;
+  gate: string;
+  confidence: number;
+  vehicleType: "car" | "motorcycle" | "pmr" | "ev";
+}
+
+export interface LiveEvent {
+  id: string;
+  time: string;
+  type: "entry" | "exit" | "payment" | "override" | "maintenance" | "shift";
+  description: string;
+  badgeTone: "green" | "critical" | "warning" | "paid" | "pending";
+}
+
 export interface UserProfile {
   id: string;
   name: string;
@@ -126,6 +193,10 @@ export interface ParkiaState {
   notificationsEnabled: boolean;
   todayRevenue: number;
   todaySessionsCount: number;
+  shift: ShiftSession;
+  parkedVehicles: ParkedVehicleSession[];
+  lprCaptures: LprCapture[];
+  liveEvents: LiveEvent[];
 }
 
 const STORAGE_KEY = "parkia_sim_state_v1";
@@ -376,16 +447,225 @@ const defaultState: ParkiaState = {
   notificationsEnabled: true,
   todayRevenue: 18400000,
   todaySessionsCount: 1284,
+  shift: {
+    isOpen: true,
+    shiftName: "Turno AM · 06:00 - 14:00",
+    operatorName: "Laura Gómez",
+    operatorCode: "OP-8492",
+    stationName: "Garita Principal Norte",
+    baseCash: 200000,
+    openedAt: "Hoy, 06:00 a. m.",
+    peripherals: {
+      lprNorth: "online",
+      lprSouth: "online",
+      barrierNorth: "online",
+      barrierSouth: "offline",
+      printer: "online",
+      cashDrawer: "online",
+    },
+  },
+  parkedVehicles: [
+    {
+      id: "SES-94001",
+      plate: "JHT · 482",
+      vehicleType: "car",
+      brand: "Chevrolet Tracker",
+      color: "Gris grafito",
+      entryTime: "08:42 a. m.",
+      entryTimestamp: Date.now() - 138 * 60 * 1000,
+      accessGate: "Entrada Norte",
+      spotCode: "A-03",
+      floor: "Piso 2",
+      status: "active",
+      ticketCode: "TCK-849201",
+    },
+    {
+      id: "SES-94002",
+      plate: "KLO · 912",
+      vehicleType: "car",
+      brand: "Mazda 3",
+      color: "Rojo diamante",
+      entryTime: "09:15 a. m.",
+      entryTimestamp: Date.now() - 105 * 60 * 1000,
+      accessGate: "Entrada Norte",
+      spotCode: "A-01",
+      floor: "Piso 1",
+      status: "active",
+      ticketCode: "TCK-849202",
+    },
+    {
+      id: "SES-94003",
+      plate: "WXZ · 402",
+      vehicleType: "motorcycle",
+      brand: "Yamaha MT-03",
+      color: "Azul mate",
+      entryTime: "10:30 a. m.",
+      entryTimestamp: Date.now() - 30 * 60 * 1000,
+      accessGate: "Entrada Norte",
+      spotCode: "B-03",
+      floor: "Piso 1",
+      status: "active",
+      ticketCode: "TCK-849203",
+    },
+    {
+      id: "SES-94004",
+      plate: "EVX · 889",
+      vehicleType: "ev",
+      brand: "BYD Seal",
+      color: "Azul eléctrico",
+      entryTime: "07:50 a. m.",
+      entryTimestamp: Date.now() - 190 * 60 * 1000,
+      accessGate: "Entrada Sur",
+      spotCode: "A-02",
+      floor: "Piso 2",
+      status: "active",
+      ticketCode: "TCK-849204",
+    },
+    {
+      id: "SES-94005",
+      plate: "PMR · 104",
+      vehicleType: "pmr",
+      brand: "Toyota Corolla",
+      color: "Blanco perlado",
+      entryTime: "11:10 a. m.",
+      entryTimestamp: Date.now() - 15 * 60 * 1000,
+      accessGate: "Entrada Sur",
+      spotCode: "A-01",
+      floor: "Piso 2",
+      status: "active",
+      ticketCode: "TCK-849205",
+    },
+    {
+      id: "SES-94006",
+      plate: "ABC · 123",
+      vehicleType: "car",
+      brand: "Renault Duster",
+      color: "Plata",
+      entryTime: "09:40 a. m.",
+      entryTimestamp: Date.now() - 80 * 60 * 1000,
+      accessGate: "Entrada Norte",
+      spotCode: "A-02",
+      floor: "Piso 1",
+      status: "paid",
+      paidAt: "11:50 a. m.",
+      paidAmount: 14000,
+      paymentMethod: "Efectivo garita",
+      gracePeriodExpiresAt: Date.now() + 10 * 60 * 1000,
+      ticketCode: "TCK-849206",
+    },
+  ],
+  lprCaptures: [
+    {
+      id: "lpr-1",
+      plate: "ABC · 123",
+      time: "09:40 a. m.",
+      date: "Hoy, 12 jun",
+      gate: "Entrada Norte",
+      confidence: 98,
+      vehicleType: "car",
+    },
+    {
+      id: "lpr-2",
+      plate: "JHT · 482",
+      time: "08:42 a. m.",
+      date: "Hoy, 12 jun",
+      gate: "Entrada Norte",
+      confidence: 99,
+      vehicleType: "car",
+    },
+    {
+      id: "lpr-3",
+      plate: "EVX · 889",
+      time: "07:50 a. m.",
+      date: "Hoy, 12 jun",
+      gate: "Entrada Sur",
+      confidence: 97,
+      vehicleType: "ev",
+    },
+    {
+      id: "lpr-4",
+      plate: "KLO · 912",
+      time: "09:15 a. m.",
+      date: "Hoy, 12 jun",
+      gate: "Entrada Norte",
+      confidence: 96,
+      vehicleType: "car",
+    },
+    {
+      id: "lpr-5",
+      plate: "WXZ · 402",
+      time: "10:30 a. m.",
+      date: "Hoy, 12 jun",
+      gate: "Entrada Norte",
+      confidence: 94,
+      vehicleType: "motorcycle",
+    },
+    {
+      id: "lpr-6",
+      plate: "PMR · 104",
+      time: "11:10 a. m.",
+      date: "Hoy, 12 jun",
+      gate: "Entrada Sur",
+      confidence: 98,
+      vehicleType: "pmr",
+    },
+  ],
+  liveEvents: [
+    {
+      id: "ev1",
+      time: "11:50 a. m.",
+      type: "payment",
+      description: "Cobro en ventanilla: $14.000 (Placa ABC · 123) · Efectivo",
+      badgeTone: "paid",
+    },
+    {
+      id: "ev2",
+      time: "11:10 a. m.",
+      type: "entry",
+      description: "Ingreso autorizado: PMR · 104 por Entrada Sur (Piso 2, A-01)",
+      badgeTone: "green",
+    },
+    {
+      id: "ev3",
+      time: "10:30 a. m.",
+      type: "entry",
+      description: "Ingreso Moto: WXZ · 402 por Entrada Norte",
+      badgeTone: "green",
+    },
+    {
+      id: "ev4",
+      time: "09:42 a. m.",
+      type: "override",
+      description: "Apertura manual en Salida Norte (Incidencia #2839 - Ticket extraviado)",
+      badgeTone: "warning",
+    },
+  ],
 };
 
-// Cargar estado inicial desde localStorage si existe
+// Cargar estado inicial desde localStorage si existe con sanitización
 function loadState(): ParkiaState {
   if (typeof window === "undefined") return defaultState;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return defaultState;
     const parsed = JSON.parse(raw);
-    return { ...defaultState, ...parsed };
+    return {
+      ...defaultState,
+      ...parsed,
+      shift: { ...defaultState.shift, ...(parsed.shift || {}) },
+      parkedVehicles:
+        parsed.parkedVehicles && parsed.parkedVehicles.length > 0
+          ? parsed.parkedVehicles
+          : defaultState.parkedVehicles,
+      lprCaptures:
+        parsed.lprCaptures && parsed.lprCaptures.length > 0
+          ? parsed.lprCaptures
+          : defaultState.lprCaptures,
+      liveEvents:
+        parsed.liveEvents && parsed.liveEvents.length > 0
+          ? parsed.liveEvents
+          : defaultState.liveEvents,
+    };
   } catch (err) {
     console.warn("Error leyendo localStorage de Parkia:", err);
     return defaultState;
@@ -713,11 +993,13 @@ export const parkiaActions = {
     const gateIndex = currentState.gates.findIndex((g) => g.name === gateName);
     if (gateIndex === -1) return;
 
+    const expiresAt = Date.now() + 6000;
     const updatedGates = [...currentState.gates];
     updatedGates[gateIndex] = {
       ...updatedGates[gateIndex],
       state: "Abierta (Manual)",
       eventsToday: updatedGates[gateIndex].eventsToday + 1,
+      manualOpenExpiresAt: expiresAt,
     };
 
     const newException: GateException = {
@@ -744,6 +1026,7 @@ export const parkiaActions = {
         restoreGates[gIdx] = {
           ...restoreGates[gIdx],
           state: "Cerrada",
+          manualOpenExpiresAt: null,
         };
         currentState = { ...currentState, gates: restoreGates };
         emitChange();
@@ -809,6 +1092,581 @@ export const parkiaActions = {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  },
+
+  // Flujo O1: Apertura de Turno y Declaración de Base de Caja
+  openShift(data: {
+    shiftName: string;
+    stationName: string;
+    baseCash: number;
+    operatorName?: string;
+  }) {
+    const timeStr = new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+    const op = data.operatorName || currentState.currentUser?.name || "Laura Gómez";
+    currentState = {
+      ...currentState,
+      shift: {
+        ...currentState.shift,
+        isOpen: true,
+        shiftName: data.shiftName,
+        stationName: data.stationName,
+        baseCash: data.baseCash,
+        operatorName: op,
+        openedAt: `Hoy, ${timeStr}`,
+      },
+      liveEvents: [
+        {
+          id: `ev-${Date.now()}`,
+          time: timeStr,
+          type: "shift",
+          description: `Apertura de turno: ${data.shiftName} en ${data.stationName} (Base: $${new Intl.NumberFormat("es-CO").format(data.baseCash)})`,
+          badgeTone: "green",
+        },
+        ...currentState.liveEvents,
+      ],
+    };
+    emitChange();
+  },
+
+  // Flujo O2: Cierre de Turno y Arqueo de Caja (Corte Z)
+  closeShift(data: { countedCash: number; countedVouchers: number; notes: string }) {
+    const timeStr = new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+    const op = currentState.shift.operatorName || "Laura Gómez";
+
+    const cashTotal =
+      currentState.history
+        .filter(
+          (h) =>
+            h.status === "paid" &&
+            (h.method?.toLowerCase().includes("efectivo") || h.method === "Garita")
+        )
+        .reduce((s, h) => s + h.total, 0) + currentState.shift.baseCash;
+
+    const voucherTotal = currentState.history
+      .filter(
+        (h) =>
+          h.status === "paid" &&
+          (h.method?.toLowerCase().includes("visa") ||
+            h.method?.toLowerCase().includes("mastercard") ||
+            h.method?.toLowerCase().includes("datáfono"))
+      )
+      .reduce((s, h) => s + h.total, 0);
+
+    const digitalTotal = currentState.history
+      .filter(
+        (h) =>
+          h.status === "paid" &&
+          (h.method?.toLowerCase().includes("nequi") || h.method?.toLowerCase().includes("qr"))
+      )
+      .reduce((s, h) => s + h.total, 0);
+
+    const cashDiff = data.countedCash - cashTotal;
+
+    const zCut = {
+      closedAt: `Hoy, ${timeStr}`,
+      operator: op,
+      countedCash: data.countedCash,
+      systemCash: cashTotal,
+      cashDiff,
+      countedVouchers: data.countedVouchers,
+      systemVouchers: voucherTotal,
+      digitalTotal,
+      grandTotal: cashTotal + voucherTotal + digitalTotal,
+      notes: data.notes || "Sin observaciones registradas",
+    };
+
+    currentState = {
+      ...currentState,
+      shift: {
+        ...currentState.shift,
+        isOpen: false,
+        lastZCut: zCut,
+      },
+      liveEvents: [
+        {
+          id: `ev-${Date.now()}`,
+          time: timeStr,
+          type: "shift",
+          description: `Corte Z ejecutado: Turno cerrado por ${op}. Descuadre caja: $${new Intl.NumberFormat("es-CO").format(cashDiff)}`,
+          badgeTone: Math.abs(cashDiff) > 5000 ? "critical" : "paid",
+        },
+        ...currentState.liveEvents,
+      ],
+    };
+    emitChange();
+    return zCut;
+  },
+
+  // Flujo O4: Ingreso vehicular manual asistido y emisión de ticket
+  processManualEntry(data: {
+    plate: string;
+    vehicleType: "car" | "motorcycle" | "pmr" | "ev";
+    gateName: string;
+    brand?: string;
+    color?: string;
+    spotId?: string;
+  }) {
+    const cleanPlate = data.plate.toUpperCase().trim();
+    const timeStr = new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+
+    // Asignar bahía libre disponible acorde al tipo
+    const targetSpot =
+      currentState.spots.find(
+        (s) =>
+          s.state === "free" &&
+          (data.vehicleType === "pmr"
+            ? s.type === "pmr"
+            : data.vehicleType === "ev"
+            ? s.type === "ev"
+            : s.type === "car")
+      ) ||
+      currentState.spots.find((s) => s.state === "free") || {
+        id: "A-01",
+        floor: "Piso 1" as const,
+        zone: "Zona A" as const,
+        state: "free" as const,
+        type: data.vehicleType,
+        distanceElevator: 25,
+        hasCharger: false,
+      };
+
+    const updatedSpots = currentState.spots.map((s) =>
+      s.id === targetSpot.id && s.floor === targetSpot.floor
+        ? { ...s, state: "occupied" as const }
+        : s
+    );
+
+    const ticketCode = `TCK-${Math.floor(100000 + Math.random() * 900000)}`;
+    const newSession: ParkedVehicleSession = {
+      id: `SES-${Math.floor(94000 + Math.random() * 1000)}`,
+      plate: cleanPlate,
+      vehicleType: data.vehicleType,
+      brand: data.brand || "Vehículo verificado",
+      color: data.color || "Plata",
+      entryTime: timeStr,
+      entryTimestamp: Date.now(),
+      accessGate: data.gateName,
+      spotCode: targetSpot.id,
+      floor: targetSpot.floor,
+      status: "active",
+      ticketCode,
+    };
+
+    const newLpr: LprCapture = {
+      id: `lpr-${Date.now()}`,
+      plate: cleanPlate,
+      time: timeStr,
+      date: "Hoy, " + new Date().toLocaleDateString("es-CO", { day: "numeric", month: "short" }),
+      gate: data.gateName,
+      confidence: 97,
+      vehicleType: data.vehicleType,
+    };
+
+    // Levantar talanquera por 6 segundos
+    const gateIndex = currentState.gates.findIndex((g) => g.name === data.gateName);
+    const updatedGates = [...currentState.gates];
+    if (gateIndex !== -1) {
+      updatedGates[gateIndex] = {
+        ...updatedGates[gateIndex],
+        state: "Abierta (Manual)",
+        eventsToday: updatedGates[gateIndex].eventsToday + 1,
+      };
+    }
+
+    currentState = {
+      ...currentState,
+      spots: updatedSpots,
+      gates: updatedGates,
+      parkedVehicles: [newSession, ...currentState.parkedVehicles],
+      lprCaptures: [newLpr, ...currentState.lprCaptures],
+      todaySessionsCount: currentState.todaySessionsCount + 1,
+      liveEvents: [
+        {
+          id: `ev-${Date.now()}`,
+          time: timeStr,
+          type: "entry",
+          description: `Ingreso asistido: ${cleanPlate} (${data.vehicleType}) por ${data.gateName} → Bahía ${targetSpot.floor} ${targetSpot.id}`,
+          badgeTone: "green",
+        },
+        ...currentState.liveEvents,
+      ],
+    };
+    emitChange();
+
+    setTimeout(() => {
+      const restoreGates = [...currentState.gates];
+      const gIdx = restoreGates.findIndex((g) => g.name === data.gateName);
+      if (gIdx !== -1 && restoreGates[gIdx].state === "Abierta (Manual)") {
+        restoreGates[gIdx] = { ...restoreGates[gIdx], state: "Cerrada" };
+        currentState = { ...currentState, gates: restoreGates };
+        emitChange();
+      }
+    }, 6000);
+
+    return newSession;
+  },
+
+  // Flujo O5: Liquidación manual en ventanilla y cobro POS
+  processPosPayment(data: {
+    plate: string;
+    paymentMethod: string;
+    discountName?: string;
+    discountPercent?: number;
+    receivedCash?: number;
+  }) {
+    const cleanPlate = data.plate.toUpperCase().trim();
+    const timeStr = new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+
+    const sessionIndex = currentState.parkedVehicles.findIndex(
+      (v) =>
+        v.plate.toUpperCase().replace(/\s/g, "") === cleanPlate.replace(/\s/g, "") &&
+        v.status === "active"
+    );
+
+    if (sessionIndex === -1) {
+      return { success: false, message: "No se encontró vehículo activo con esa placa." };
+    }
+
+    const session = currentState.parkedVehicles[sessionIndex];
+    const elapsedMinutes = Math.max(
+      1,
+      Math.round((Date.now() - session.entryTimestamp) / (60 * 1000))
+    );
+
+    let rate = currentState.tariffs.carRate;
+    let cap = currentState.tariffs.carCap;
+    if (session.vehicleType === "motorcycle") {
+      rate = currentState.tariffs.motoRate;
+      cap = currentState.tariffs.motoCap;
+    } else if (session.vehicleType === "ev") {
+      rate = currentState.tariffs.evRate;
+      cap = currentState.tariffs.evCap;
+    }
+
+    const subtotal = Math.min(elapsedMinutes * rate, cap);
+    const discount = data.discountPercent
+      ? Math.round(subtotal * (data.discountPercent / 100))
+      : 0;
+    const finalTotal = Math.max(0, subtotal - discount);
+    const change =
+      data.receivedCash && data.receivedCash > finalTotal ? data.receivedCash - finalTotal : 0;
+
+    const qrCode = `QR-PARKIA-${session.id}-EXIT`;
+
+    const updatedParked = [...currentState.parkedVehicles];
+    updatedParked[sessionIndex] = {
+      ...session,
+      status: "paid",
+      paidAt: timeStr,
+      paidAmount: finalTotal,
+      paymentMethod: data.paymentMethod,
+      gracePeriodExpiresAt: Date.now() + 15 * 60 * 1000,
+    };
+
+    const newHistoryItem: ParkingHistoryItem = {
+      id: session.id,
+      date: "Hoy, " + new Date().toLocaleDateString("es-CO", { day: "numeric", month: "short" }),
+      plate: session.plate,
+      duration: `${Math.floor(elapsedMinutes / 60)} h ${elapsedMinutes % 60} min`,
+      durationMinutes: elapsedMinutes,
+      status: "paid",
+      total: finalTotal,
+      method: `${data.paymentMethod} (Ventanilla)`,
+      qrCode,
+    };
+
+    currentState = {
+      ...currentState,
+      parkedVehicles: updatedParked,
+      history: [newHistoryItem, ...currentState.history],
+      todayRevenue: currentState.todayRevenue + finalTotal,
+      liveEvents: [
+        {
+          id: `ev-${Date.now()}`,
+          time: timeStr,
+          type: "payment",
+          description: `Cobro en ventanilla: $${new Intl.NumberFormat("es-CO").format(finalTotal)} (${session.plate}) · ${data.paymentMethod}${data.discountName ? ` [Desc: ${data.discountName}]` : ""}`,
+          badgeTone: "paid",
+        },
+        ...currentState.liveEvents,
+      ],
+    };
+    emitChange();
+
+    return {
+      success: true,
+      finalTotal,
+      subtotal,
+      discount,
+      change,
+      ticketCode: session.ticketCode,
+      qrCode,
+      elapsedMinutes,
+      graceMinutes: 15,
+    };
+  },
+
+  // Flujo O6: Control y despacho de salida vehicular
+  processExitValidation(data: { plate: string; gateName: string }) {
+    const cleanPlate = data.plate.toUpperCase().trim();
+    const timeStr = new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+
+    const sessionIndex = currentState.parkedVehicles.findIndex(
+      (v) =>
+        v.plate.toUpperCase().replace(/\s/g, "") === cleanPlate.replace(/\s/g, "") &&
+        v.status !== "completed"
+    );
+
+    if (sessionIndex === -1) {
+      return {
+        success: false,
+        reason: "not_found",
+        message: "Placa no encontrada en los registros de patio.",
+      };
+    }
+
+    const session = currentState.parkedVehicles[sessionIndex];
+
+    if (session.status === "active") {
+      return {
+        success: false,
+        reason: "unpaid",
+        message: `El vehículo ${session.plate} tiene cobro pendiente. Liquidar en ventanilla o por QR.`,
+      };
+    }
+
+    // Si está pagada, verificar tiempo de gracia (15 min)
+    const now = Date.now();
+    const expiresAt = session.gracePeriodExpiresAt || now + 15 * 60 * 1000;
+    if (now > expiresAt) {
+      const extraMinutes = Math.round((now - expiresAt) / (60 * 1000));
+      const extraFee = extraMinutes * currentState.tariffs.carRate;
+      return {
+        success: false,
+        reason: "grace_expired",
+        extraMinutes,
+        extraFee,
+        message: `Tiempo de gracia de 15 min superado (+${extraMinutes} min). Saldo adicional a pagar: $${new Intl.NumberFormat("es-CO").format(extraFee)}.`,
+      };
+    }
+
+    // Salida autorizada
+    const updatedParked = [...currentState.parkedVehicles];
+    updatedParked[sessionIndex] = {
+      ...session,
+      status: "completed",
+    };
+
+    // Liberar bahía en spots
+    const updatedSpots = currentState.spots.map((s) =>
+      s.id === session.spotCode && s.floor === session.floor
+        ? { ...s, state: "free" as const }
+        : s
+    );
+
+    // Abrir talanquera de salida por 6s
+    const gateIndex = currentState.gates.findIndex((g) => g.name === data.gateName);
+    const updatedGates = [...currentState.gates];
+    if (gateIndex !== -1) {
+      updatedGates[gateIndex] = {
+        ...updatedGates[gateIndex],
+        state: "Abierta (Manual)",
+        eventsToday: updatedGates[gateIndex].eventsToday + 1,
+      };
+    }
+
+    currentState = {
+      ...currentState,
+      parkedVehicles: updatedParked,
+      spots: updatedSpots,
+      gates: updatedGates,
+      liveEvents: [
+        {
+          id: `ev-${Date.now()}`,
+          time: timeStr,
+          type: "exit",
+          description: `Salida validada y despachada: ${session.plate} por ${data.gateName} · Bahía ${session.spotCode} liberada`,
+          badgeTone: "green",
+        },
+        ...currentState.liveEvents,
+      ],
+    };
+    emitChange();
+
+    setTimeout(() => {
+      const restoreGates = [...currentState.gates];
+      const gIdx = restoreGates.findIndex((g) => g.name === data.gateName);
+      if (gIdx !== -1 && restoreGates[gIdx].state === "Abierta (Manual)") {
+        restoreGates[gIdx] = { ...restoreGates[gIdx], state: "Cerrada" };
+        currentState = { ...currentState, gates: restoreGates };
+        emitChange();
+      }
+    }, 6000);
+
+    return {
+      success: true,
+      message: `¡Salida autorizada para ${session.plate}! Talanquera ${data.gateName} abierta.`,
+    };
+  },
+
+  // Flujo O8: Gestión de Ticket Perdido y Resolución de Discrepancias
+  resolveLostTicket(data: {
+    plate: string;
+    replacementFee: number;
+    paymentMethod: string;
+    operatorName?: string;
+  }) {
+    const cleanPlate = data.plate.toUpperCase().trim();
+    const timeStr = new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+    const op = data.operatorName || currentState.currentUser?.name || "Laura Gómez";
+
+    const sessionIndex = currentState.parkedVehicles.findIndex(
+      (v) => v.plate.toUpperCase().replace(/\s/g, "") === cleanPlate.replace(/\s/g, "")
+    );
+
+    let spotCode = "A-02";
+    let floor: "Piso 1" | "Piso 2" | "Piso 3" = "Piso 1";
+    let stayCost = 15000;
+
+    if (sessionIndex !== -1) {
+      const s = currentState.parkedVehicles[sessionIndex];
+      spotCode = s.spotCode;
+      floor = s.floor;
+      const mins = Math.max(30, Math.round((Date.now() - s.entryTimestamp) / (60 * 1000)));
+      stayCost = mins * currentState.tariffs.carRate;
+    }
+
+    const grandTotal = stayCost + data.replacementFee;
+
+    // Registrar excepción auditada
+    const newException: GateException = {
+      id: `#${Math.floor(2845 + Math.random() * 500)}`,
+      time: timeStr,
+      type: `Ticket extraviado resuelto (${cleanPlate})`,
+      accessGate: "Salida Norte",
+      operator: op,
+      status: "Resuelto",
+    };
+
+    // Liberar puesto
+    const updatedSpots = currentState.spots.map((s) =>
+      s.id === spotCode && s.floor === floor ? { ...s, state: "free" as const } : s
+    );
+
+    const updatedParked = currentState.parkedVehicles.map((v) =>
+      v.plate.toUpperCase().replace(/\s/g, "") === cleanPlate.replace(/\s/g, "")
+        ? { ...v, status: "completed" as const }
+        : v
+    );
+
+    const newHistory: ParkingHistoryItem = {
+      id: `SES-LOST-${Date.now().toString(36).toUpperCase()}`,
+      date: "Hoy, " + new Date().toLocaleDateString("es-CO", { day: "numeric", month: "short" }),
+      plate: cleanPlate,
+      duration: "Calculada LPR + Sanción",
+      durationMinutes: 180,
+      status: "paid",
+      total: grandTotal,
+      method: `${data.paymentMethod} (Ventanilla Contingencia)`,
+    };
+
+    // Abrir Salida Norte
+    const updatedGates = currentState.gates.map((g) =>
+      g.name === "Salida Norte"
+        ? { ...g, state: "Abierta (Manual)" as const, eventsToday: g.eventsToday + 1 }
+        : g
+    );
+
+    currentState = {
+      ...currentState,
+      spots: updatedSpots,
+      gates: updatedGates,
+      parkedVehicles: updatedParked,
+      history: [newHistory, ...currentState.history],
+      exceptions: [newException, ...currentState.exceptions],
+      todayRevenue: currentState.todayRevenue + grandTotal,
+      liveEvents: [
+        {
+          id: `ev-${Date.now()}`,
+          time: timeStr,
+          type: "override",
+          description: `Ticket extraviado resuelto: ${cleanPlate}. Cobro: $${new Intl.NumberFormat("es-CO").format(grandTotal)} · Pase de salida otorgado`,
+          badgeTone: "warning",
+        },
+        ...currentState.liveEvents,
+      ],
+    };
+    emitChange();
+
+    setTimeout(() => {
+      const restoreGates = currentState.gates.map((g) =>
+        g.name === "Salida Norte" && g.state === "Abierta (Manual)"
+          ? { ...g, state: "Cerrada" as const }
+          : g
+      );
+      currentState = { ...currentState, gates: restoreGates };
+      emitChange();
+    }, 6000);
+
+    return { success: true, grandTotal, stayCost, replacementFee: data.replacementFee };
+  },
+
+  // Flujo O9: Bloqueo de bahía por mantenimiento o derrame
+  toggleSpotMaintenance(spotId: string, floor: "Piso 1" | "Piso 2" | "Piso 3") {
+    const timeStr = new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+    let newState: SpotState = "maintenance";
+
+    const updatedSpots = currentState.spots.map((s) => {
+      if (s.id === spotId && s.floor === floor) {
+        newState = s.state === "maintenance" ? "free" : "maintenance";
+        return { ...s, state: newState };
+      }
+      return s;
+    });
+
+    currentState = {
+      ...currentState,
+      spots: updatedSpots,
+      liveEvents: [
+        {
+          id: `ev-${Date.now()}`,
+          time: timeStr,
+          type: "maintenance",
+          description: `Bahía ${floor} · ${spotId} ${newState === "maintenance" ? "bloqueada por mantenimiento/derrame" : "desbloqueada y disponible"}`,
+          badgeTone: newState === "maintenance" ? "warning" : "green",
+        },
+        ...currentState.liveEvents,
+      ],
+    };
+    emitChange();
+  },
+
+  // Flujo O9: Liberar reserva vencida
+  releaseExpiredReservation(spotId: string, floor: "Piso 1" | "Piso 2" | "Piso 3") {
+    const timeStr = new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+
+    const updatedSpots = currentState.spots.map((s) => {
+      if (s.id === spotId && s.floor === floor && s.state === "reserved") {
+        return { ...s, state: "free" as const };
+      }
+      return s;
+    });
+
+    currentState = {
+      ...currentState,
+      spots: updatedSpots,
+      liveEvents: [
+        {
+          id: `ev-${Date.now()}`,
+          time: timeStr,
+          type: "maintenance",
+          description: `Reserva no reclamada de Bahía ${floor} · ${spotId} liberada por tiempo límite`,
+          badgeTone: "green",
+        },
+        ...currentState.liveEvents,
+      ],
+    };
+    emitChange();
   },
 };
 

@@ -5,7 +5,7 @@ export type IconName =
   | "settings" | "bell" | "search" | "arrow" | "check" | "close"
   | "calendar" | "card" | "user" | "alert" | "download" | "plus"
   | "chevron" | "logout" | "filter" | "more" | "shield" | "edit"
-  | "trash" | "refresh";
+  | "trash" | "refresh" | "print" | "key";
 
 const paths: Record<IconName, React.ReactNode> = {
   home: <><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10M9 20v-6h6v6"/></>,
@@ -35,6 +35,8 @@ const paths: Record<IconName, React.ReactNode> = {
   edit: <><path d="m14 5 5 5M4 20l4-1 11-11-3-3L5 16l-1 4Z"/></>,
   trash: <><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></>,
   refresh: <><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></>,
+  print: <><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></>,
+  key: <><circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.7 12.3 8.3-8.3M17 6l2 2M15 8l2 2"/></>,
 };
 
 export function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
