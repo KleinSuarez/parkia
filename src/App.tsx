@@ -7,6 +7,7 @@ import { MobileDriverApp } from "./components/MobileDriverApp";
 import { CashierDesk } from "./components/CashierDesk";
 import { YardControl } from "./components/YardControl";
 import { ShiftManager } from "./components/ShiftManager";
+import { AccessibilityWidget } from "./components/AccessibilityWidget";
 
 // ── COMPONENTES REUTILIZABLES DE ANIMACIÓN Y ACCESIBILIDAD ──
 function AnimatedValue({
@@ -170,27 +171,33 @@ function Header({
   const activeAlerts = state.alerts.filter((a) => !dismissedIds.includes(a.id));
 
   return (
-    <div className="page-head" style={{ position: "relative" }}>
+    <header className="page-head" role="banner" style={{ position: "relative" }}>
       <div>
         <p className="eyebrow">{eyebrow}</p>
         <h1>{title}</h1>
       </div>
       <div className="head-actions">
         <button
+          type="button"
           className="icon-btn"
-          aria-label="Notificaciones"
+          aria-label={`Centro de notificaciones. ${activeAlerts.length} alertas pendientes`}
+          aria-expanded={showNotifs}
+          aria-haspopup="dialog"
           onClick={() => setShowNotifs(!showNotifs)}
           style={{ position: "relative" }}
         >
           <Icon name="bell" />
           {activeAlerts.length > 0 && <span className="notification-dot" />}
         </button>
-        <div className="avatar">{avatarText}</div>
+        <div className="avatar" aria-label={`Usuario actual ${avatarText}`}>{avatarText}</div>
       </div>
 
       {showNotifs && (
         <div
           className="notifications-popover"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Centro de notificaciones activas"
           style={{
             position: "absolute",
             top: "100%",
@@ -222,6 +229,8 @@ function Header({
               <strong style={{ fontSize: 13 }}>Centro de Notificaciones</strong>
             </div>
             <button
+              type="button"
+              aria-label="Cerrar centro de notificaciones"
               onClick={() => setShowNotifs(false)}
               style={{ background: "transparent", border: 0, color: "#94a3b8", cursor: "pointer", padding: 2 }}
             >
@@ -287,7 +296,7 @@ function Header({
           )}
         </div>
       )}
-    </div>
+    </header>
   );
 }
 
@@ -1883,6 +1892,7 @@ function GateItemCard({
       </div>
 
       <button
+        type="button"
         className={
           isOpenManual
             ? "primary full"
@@ -1892,6 +1902,13 @@ function GateItemCard({
         }
         onClick={() => onOpen(gate.name)}
         disabled={isOpenManual}
+        aria-label={
+          isOpenManual
+            ? `Talanquera ${gate.name} abierta manualmente. Cerrando automáticamente en ${secondsLeft} segundos.`
+            : gate.connection === "online"
+            ? `Abrir manualmente talanquera ${gate.name} durante 6 segundos (Atajo F6)`
+            : `Gestionar incidencia de conexión offline en talanquera ${gate.name}`
+        }
         style={{
           position: "relative",
           overflow: "hidden",
@@ -3027,7 +3044,15 @@ export default function App() {
 
   // Si no hay usuario autenticado, renderizar la pantalla de Login y Registro (Flujo A0)
   if (!state.currentUser) {
-    return <AuthScreen />;
+    return (
+      <>
+        <a href="#auth-screen" className="skip-to-content">Saltar al formulario de acceso</a>
+        <div id="auth-screen">
+          <AuthScreen />
+        </div>
+        <AccessibilityWidget />
+      </>
+    );
   }
 
   const switchRole = (newRole: "driver" | "admin") => {
@@ -3038,20 +3063,26 @@ export default function App() {
   if (role === "driver") {
     return (
       <>
-        <MobileDriverApp onSwitchToAdmin={() => switchRole("admin")} />
+        <a href="#main-driver-content" className="skip-to-content">Saltar al contenido principal</a>
+        <div id="main-driver-content">
+          <MobileDriverApp onSwitchToAdmin={() => switchRole("admin")} />
+        </div>
         {/* Botón Flotante de Demostración Reactiva */}
         <aside className="floating-demo-bar" aria-label="Controles de demostración">
-          <span className="live-dot" />
+          <span className="live-dot" aria-hidden="true" />
           <span>Demo Activa</span>
           <button
             type="button"
             className="floating-reset-btn"
             onClick={() => actions.resetDemo()}
             title="Restablecer datos iniciales de fábrica"
+            aria-label="Restablecer datos iniciales de fábrica de la demostración"
           >
             <Icon name="refresh" size={13} /> Reiniciar datos demo
           </button>
         </aside>
+        {/* Widget Global Flotante de Accesibilidad Universal */}
+        <AccessibilityWidget />
       </>
     );
   }
@@ -3069,8 +3100,9 @@ export default function App() {
 
   return (
     <div className={`app-shell ${role}`}>
-      <aside className="sidebar">
-        <button className="brand dark" onClick={() => setAdminPage("dashboard")}>
+      <a href="#main-content" className="skip-to-content">Saltar al contenido principal</a>
+      <aside className="sidebar" aria-label="Navegación principal de la consola de control">
+        <button type="button" className="brand dark" onClick={() => setAdminPage("dashboard")} aria-label="Parkia, ir al dashboard principal">
           <span>P</span>
           <strong>Parkia</strong>
         </button>
@@ -3079,6 +3111,7 @@ export default function App() {
           <button
             type="button"
             onClick={() => setShowBranchModal(true)}
+            aria-label={`Sede actual: ${selectedBranch.name}, ${selectedBranch.address}. Clic para cambiar sede operativa.`}
             title="Clic para cambiar de sede operativa"
           >
             <i>
@@ -3091,12 +3124,15 @@ export default function App() {
             <Icon name="chevron" size={15} />
           </button>
         </div>
-        <nav>
+        <nav aria-label="Módulos de la consola">
           {adminNav.map((n) => (
             <button
               key={n.id}
+              type="button"
               className={adminPage === n.id ? "active" : ""}
               onClick={() => setAdminPage(n.id)}
+              aria-label={`Ir al módulo ${n.label}`}
+              aria-current={adminPage === n.id ? "page" : undefined}
             >
               <Icon name={n.icon} />
               {n.label}
@@ -3109,7 +3145,7 @@ export default function App() {
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <button onClick={() => switchRole("driver")}>
+          <button type="button" onClick={() => switchRole("driver")} aria-label="Cambiar a la App móvil del Conductor">
             <Icon name="logout" />
             <span>
               <strong>App del Conductor</strong>
@@ -3117,14 +3153,16 @@ export default function App() {
             </span>
           </button>
           <div className="operator">
-            <span className="avatar small">{state.currentUser.avatarText}</span>
+            <span className="avatar small" aria-hidden="true">{state.currentUser.avatarText}</span>
             <span>
               <strong>{state.currentUser.name}</strong>
               <small>{state.currentUser.shift || "Turno AM"}</small>
             </span>
             <button
+              type="button"
               className="icon-btn"
               onClick={() => actions.logout()}
+              aria-label="Cerrar sesión de operador"
               title="Cerrar sesión"
               style={{
                 width: 26,
@@ -3140,37 +3178,40 @@ export default function App() {
         </div>
       </aside>
 
-      <div className="content">{adminContent[adminPage] || adminContent.dashboard}</div>
+      <main id="main-content" className="content" role="main" tabIndex={-1}>
+        {adminContent[adminPage] || adminContent.dashboard}
+      </main>
 
       {/* Barra de Atajos Rápidos de Monitor (Fast-Lane Hotkeys) */}
       <footer className="hotkeys-bar" aria-label="Atajos de teclado para monitor">
         <span>Atajos de Garita:</span>
-        <button type="button" onClick={() => setAdminPage("caja")}>
+        <button type="button" onClick={() => setAdminPage("caja")} aria-label="Atajo F1: Ingreso Asistido de vehículos">
           <kbd>F1</kbd> Ingreso Asistido
         </button>
-        <button type="button" onClick={() => setAdminPage("caja")}>
+        <button type="button" onClick={() => setAdminPage("caja")} aria-label="Atajo F2: Cobro en Ventanilla POS">
           <kbd>F2</kbd> Cobro Ventanilla POS
         </button>
-        <button type="button" onClick={() => setAdminPage("talanqueras")}>
+        <button type="button" onClick={() => setAdminPage("talanqueras")} aria-label="Atajo F6: Control de Talanqueras">
           <kbd>F6</kbd> Talanqueras
         </button>
-        <button type="button" onClick={() => setAdminPage("talanqueras")}>
+        <button type="button" onClick={() => setAdminPage("talanqueras")} aria-label="Atajo F9: Ticket Extraviado">
           <kbd>F9</kbd> Ticket Extraviado
         </button>
-        <button type="button" onClick={() => setAdminPage("turnos")}>
+        <button type="button" onClick={() => setAdminPage("turnos")} aria-label="Atajo F12: Arqueo de Caja y Turnos">
           <kbd>F12</kbd> Arqueo / Turnos
         </button>
       </footer>
 
       {/* Botón Flotante de Demostración Reactiva */}
       <aside className="floating-demo-bar" aria-label="Controles de demostración">
-        <span className="live-dot" />
+        <span className="live-dot" aria-hidden="true" />
         <span>Demo Activa</span>
         <button
           type="button"
           className="floating-reset-btn"
           onClick={() => actions.resetDemo()}
           title="Restablecer datos iniciales de fábrica"
+          aria-label="Restablecer datos iniciales de la demostración"
         >
           <Icon name="refresh" size={13} /> Reiniciar datos demo
         </button>
@@ -3182,11 +3223,12 @@ export default function App() {
           <p style={{ margin: "0 0 16px", fontSize: 13, color: "#64748b" }}>
             Selecciona la sede del parqueadero para cambiar la telemetría, asignación de garita y bahías de monitoreo.
           </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }} role="list" aria-label="Sedes disponibles">
             {branches.map((b) => {
               const isCurrent = b.name === selectedBranch.name;
               return (
-                <div
+                <button
+                  type="button"
                   key={b.name}
                   onClick={() => {
                     setSelectedBranch(b);
@@ -3194,6 +3236,7 @@ export default function App() {
                     setBranchToast(`Sede cambiada a: ${b.name} (${b.address}).`);
                     setTimeout(() => setBranchToast(null), 3500);
                   }}
+                  aria-label={`Seleccionar sede ${b.name}, ${b.address}. ${isCurrent ? 'Sede actualmente activa' : `${b.freeSpots} bahías libres`}`}
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
@@ -3204,6 +3247,9 @@ export default function App() {
                     background: isCurrent ? "#f0fdfa" : "#ffffff",
                     cursor: "pointer",
                     transition: "all 150ms ease",
+                    width: "100%",
+                    textAlign: "left",
+                    fontFamily: "inherit",
                   }}
                 >
                   <div>
@@ -3217,12 +3263,12 @@ export default function App() {
                       {isCurrent ? "Sede Activa" : `${b.freeSpots} Libres`}
                     </Badge>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
           <div className="modal-actions" style={{ marginTop: 18 }}>
-            <button className="secondary full" onClick={() => setShowBranchModal(false)}>
+            <button type="button" className="secondary full" onClick={() => setShowBranchModal(false)} aria-label="Cerrar modal de cambio de sede">
               Cerrar
             </button>
           </div>
@@ -3230,7 +3276,7 @@ export default function App() {
       )}
 
       {branchToast && (
-        <div className="toast" style={{ top: 90, bottom: "auto", background: "#0d766e" }}>
+        <div className="toast" role="status" aria-live="polite" style={{ top: 90, bottom: "auto", background: "#0d766e" }}>
           <span>
             <Icon name="check" size={16} />
           </span>
@@ -3238,11 +3284,14 @@ export default function App() {
             <strong>Sede Sincronizada</strong>
             <small>{branchToast}</small>
           </div>
-          <button onClick={() => setBranchToast(null)}>
+          <button type="button" aria-label="Cerrar notificación" onClick={() => setBranchToast(null)}>
             <Icon name="close" size={14} />
           </button>
         </div>
       )}
+
+      {/* Widget Global Flotante de Accesibilidad Universal */}
+      <AccessibilityWidget />
     </div>
   );
 }

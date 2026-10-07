@@ -239,6 +239,7 @@ export function ShiftManager() {
                     type="button"
                     className="secondary compact"
                     style={{ fontSize: 11, padding: "4px 8px", height: 28 }}
+                    aria-label={`Ejecutar prueba de diagnóstico para ${p.name}: ${p.type === "lpr" ? "Test de Captura de Placa" : p.type === "gate" ? "Enviar Pulso de Apertura" : p.type === "printer" ? "Imprimir Ticket de Prueba" : "Abrir Cajón Monedero"}`}
                     onClick={() => {
                       if (p.type === "lpr") {
                         setToastMsg(`Prueba de ${p.name}: Captura exitosa. Sensor CMOS y obturador al 100%.`);

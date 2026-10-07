@@ -164,10 +164,12 @@ export function YardControl({ onGoToCashier }: { onGoToCashier?: (plate: string)
           }
 
           return (
-            <div
+            <button
               key={spot.id}
+              type="button"
               className="yard-spot-cell"
               data-spot-id={spot.id}
+              aria-label={`Bahía ${selectedFloor} ${spot.id}, tipo ${spot.type}, estado ${labelText}${veh ? `, vehículo placa ${veh.plate}` : ''}`}
               onClick={() => setSelectedSpot(spot)}
               style={{
                 background: bgColor,
@@ -180,6 +182,8 @@ export function YardControl({ onGoToCashier }: { onGoToCashier?: (plate: string)
                 alignItems: "center",
                 justifyContent: "space-between",
                 minHeight: 110,
+                width: "100%",
+                fontFamily: "inherit",
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", width: "100%", alignItems: "center" }}>
@@ -199,7 +203,7 @@ export function YardControl({ onGoToCashier }: { onGoToCashier?: (plate: string)
                   <span style={{ fontSize: 10, fontWeight: 700, color: borderColor }}>{labelText}</span>
                 )}
               </div>
-            </div>
+            </button>
           );
         })}
       </div>
@@ -207,14 +211,23 @@ export function YardControl({ onGoToCashier }: { onGoToCashier?: (plate: string)
       {/* Modal de Control de Bahía */}
       {selectedSpot && (
         <div className="modal-backdrop" onClick={() => setSelectedSpot(null)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 440 }}>
+          <div
+            className="modal-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="spot-modal-title"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: 440 }}
+          >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
               <div>
                 <span style={{ fontSize: 11, color: "#6b7280", fontWeight: 700 }}>GESTIÓN DE CELDA</span>
-                <h3 style={{ margin: 0, fontSize: 20 }}>Bahía {selectedSpot.floor} · {selectedSpot.id}</h3>
+                <h3 id="spot-modal-title" style={{ margin: 0, fontSize: 20 }}>Bahía {selectedSpot.floor} · {selectedSpot.id}</h3>
               </div>
               <button
+                type="button"
                 onClick={() => setSelectedSpot(null)}
+                aria-label={`Cerrar detalles de la bahía ${selectedSpot.id}`}
                 style={{ background: "none", border: 0, cursor: "pointer", color: "#6b7280" }}
               >
                 <Icon name="close" size={20} />
@@ -252,8 +265,10 @@ export function YardControl({ onGoToCashier }: { onGoToCashier?: (plate: string)
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {selectedSpot.state !== "occupied" && (
                 <button
+                  type="button"
                   className={selectedSpot.state === "maintenance" ? "primary full" : "primary danger full"}
                   onClick={handleToggleMaintenance}
+                  aria-label={selectedSpot.state === "maintenance" ? `Desbloquear bahía ${selectedSpot.id} y poner disponible` : `Bloquear bahía ${selectedSpot.id} por mantenimiento`}
                   style={{ height: 44, fontWeight: 700 }}
                 >
                   <Icon name="alert" size={18} />
@@ -265,8 +280,10 @@ export function YardControl({ onGoToCashier }: { onGoToCashier?: (plate: string)
 
               {selectedSpot.state === "reserved" && (
                 <button
+                  type="button"
                   className="secondary full"
                   onClick={handleReleaseReservation}
+                  aria-label={`Liberar reserva vencida de bahía ${selectedSpot.id}`}
                   style={{ height: 44, fontWeight: 700 }}
                 >
                   <Icon name="refresh" size={18} /> Liberar Reserva Vencida (15+ min)
