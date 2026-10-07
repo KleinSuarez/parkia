@@ -3010,6 +3010,7 @@ export default function App() {
     totalSpots: 120,
   });
   const [branchToast, setBranchToast] = useState<string | null>(null);
+  const [adminA11yOpen, setAdminA11yOpen] = useState(false);
 
   const branches = [
     { name: "Parking Central", address: "Calle 93 · Bogotá", freeSpots: 42, totalSpots: 120 },
@@ -3050,7 +3051,6 @@ export default function App() {
         <div id="auth-screen">
           <AuthScreen />
         </div>
-        <AccessibilityWidget />
       </>
     );
   }
@@ -3081,8 +3081,6 @@ export default function App() {
             <Icon name="refresh" size={13} /> Reiniciar datos demo
           </button>
         </aside>
-        {/* Widget Global Flotante de Accesibilidad Universal */}
-        <AccessibilityWidget />
       </>
     );
   }
@@ -3145,6 +3143,19 @@ export default function App() {
           ))}
         </nav>
         <div className="sidebar-bottom">
+          <button
+            type="button"
+            className="sidebar-a11y-btn"
+            onClick={() => setAdminA11yOpen(true)}
+            aria-label="Abrir panel de accesibilidad universal (Atajo Alt + A)"
+            title="Accesibilidad Universal (Alt + A)"
+          >
+            <span aria-hidden="true" style={{ fontSize: 18 }}>♿</span>
+            <span>
+              <strong>Accesibilidad (Alt+A)</strong>
+              <small>Zoom, Daltonismo & Voz</small>
+            </span>
+          </button>
           <button type="button" onClick={() => switchRole("driver")} aria-label="Cambiar a la App móvil del Conductor">
             <Icon name="logout" />
             <span>
@@ -3199,6 +3210,9 @@ export default function App() {
         </button>
         <button type="button" onClick={() => setAdminPage("turnos")} aria-label="Atajo F12: Arqueo de Caja y Turnos">
           <kbd>F12</kbd> Arqueo / Turnos
+        </button>
+        <button type="button" onClick={() => setAdminA11yOpen(true)} aria-label="Atajo Alt+A: Panel de Accesibilidad Universal">
+          <kbd>Alt+A</kbd> Accesibilidad
         </button>
       </footer>
 
@@ -3290,8 +3304,13 @@ export default function App() {
         </div>
       )}
 
-      {/* Widget Global Flotante de Accesibilidad Universal */}
-      <AccessibilityWidget />
+      {/* Modal de Accesibilidad Universal Integrado para Consola de Operador */}
+      <AccessibilityWidget
+        variant="operator"
+        isOpen={adminA11yOpen}
+        onClose={() => setAdminA11yOpen(false)}
+        onOpen={() => setAdminA11yOpen(true)}
+      />
     </div>
   );
 }

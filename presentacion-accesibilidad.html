@@ -693,17 +693,25 @@
       <div class="slide-header">
         <div>
           <span class="slide-tag">Diapositiva 4 de 5 · Herramienta Asistiva</span>
-          <h2 id="slide-3-title" class="slide-title">Widget Flotante de Accesibilidad Universal</h2>
-          <p class="slide-subtitle">Componente modular autocontenido disponible en todas las vistas vía ratón o atajo Alt + A</p>
+          <h2 id="slide-3-title" class="slide-title">Accesibilidad Universal Integrada (Dual UX: Móvil & Operario)</h2>
+          <p class="slide-subtitle">Arquitectura contextual que adapta la interfaz a la experiencia móvil (Bottom Sheet) y a la consola de operario (Modal de Garita)</p>
         </div>
       </div>
 
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
-        <div style="background: var(--surface-light); padding: 20px; border-radius: 14px; border: 1px solid var(--border);">
-          <div style="font-size: 26px; margin-bottom: 8px;">🔍</div>
-          <h3 style="font-size: 16px; margin-bottom: 6px;">Escalado Tipográfico Dinámico</h3>
+        <div style="background: var(--surface-light); padding: 20px; border-radius: 14px; border: 1.5px solid #0f766e;">
+          <div style="font-size: 26px; margin-bottom: 8px;">📱</div>
+          <h3 style="font-size: 16px; margin-bottom: 6px; color: #0f766e;">Experiencia Móvil (Conductor)</h3>
           <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5;">
-            Permite escalar la fuente desde <strong>90% hasta 150%</strong> sin romper el diseño flexbox/grid mediante la variable nativa <code>--a11y-font-scale</code> inyectada en <code>:root</code>.
+            Totalmente integrada <strong>dentro del marco del smartphone</strong> (<code>.phone-device</code>). Cuenta con FAB flotante interno sobre el bottom nav, píldora en header y despliega como <strong>Bottom Sheet nativa</strong> táctil. Cero elementos flotando en el fondo exterior del navegador.
+          </p>
+        </div>
+
+        <div style="background: var(--surface-light); padding: 20px; border-radius: 14px; border: 1.5px solid #0284c7;">
+          <div style="font-size: 26px; margin-bottom: 8px;">🖥️</div>
+          <h3 style="font-size: 16px; margin-bottom: 6px; color: #0284c7;">Consola de Mando (Operario)</h3>
+          <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5;">
+            Integrada directamente en la <strong>barra lateral</strong> de control (<code>.sidebar-bottom</code>) y en la botonera de garita con hotkey rápido <kbd style="background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius: 4px; font-family: monospace;">Alt+A</kbd>. Se despliega como un <strong>Modal de Escritorio accesible</strong> con alto contraste WCAG AAA.
           </p>
         </div>
 
@@ -711,30 +719,22 @@
           <div style="font-size: 26px; margin-bottom: 8px;">🎨</div>
           <h3 style="font-size: 16px; margin-bottom: 6px;">7 Modos de Daltonismo y Contraste</h3>
           <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5;">
-            Normal, Protanopía (rojo), Deuteranopía (verde), Tritanopía (azul), Monocromático, Alto Contraste Negro/Amarillo AAA y Modo Invertido con procesamiento por GPU.
+            Estándar, Protanopía (rojo), Deuteranopía (verde), Tritanopía (azul), Monocromo, Alto Contraste Negro/Amarillo AAA y Contraste Invertido mediante filtros SVG acelerados por hardware sin latencia de red.
           </p>
         </div>
 
         <div style="background: var(--surface-light); padding: 20px; border-radius: 14px; border: 1px solid var(--border);">
           <div style="font-size: 26px; margin-bottom: 8px;">🔊</div>
-          <h3 style="font-size: 16px; margin-bottom: 6px;">Lector de Pantalla Integrado (TTS)</h3>
+          <h3 style="font-size: 16px; margin-bottom: 6px;">Lector de Voz Asistido (TTS) y Zoom</h3>
           <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5;">
-            Utiliza la Web Speech API en español nativo. Al pasar el cursor o enfocar con teclado, lee la acción. Incluye el botón <em>"Leer Pantalla Actual"</em> para resúmenes automáticos.
-          </p>
-        </div>
-
-        <div style="background: var(--surface-light); padding: 20px; border-radius: 14px; border: 1px solid var(--border);">
-          <div style="font-size: 26px; margin-bottom: 8px;">📖</div>
-          <h3 style="font-size: 16px; margin-bottom: 6px;">Ergonomía y Cero Mareos</h3>
-          <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5;">
-            Modo para Dislexia con interletrado expandido (<code>letter-spacing: 0.08em</code>), cursor gigante de alto contraste y desactivación de animaciones vestibulares.
+            Síntesis Web Speech API en español que describe botones, estados y campos al enfocarlos. Escalado dinámico desde 90% a 150%, tipografía dislexia con interletrado expandido y reducción de movimiento.
           </p>
         </div>
       </div>
 
       <div style="margin-top: 24px; padding: 16px 20px; background: #0f172a; border-radius: 10px; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: gap;">
-        <span style="font-size: 13px; color: #cbd5e1;">💾 <strong>Persistencia Garantizada:</strong> Todas las preferencias se sincronizan automáticamente en <code>localStorage</code> (clave <code>parkia_a11y_settings</code>).</span>
-        <span style="font-size: 12px; font-family: 'JetBrains Mono', monospace; color: #38bdf8;">Atajo: [Alt] + [A]</span>
+        <span style="font-size: 13px; color: #cbd5e1;">💾 <strong>Sincronización Reactiva Unificada:</strong> Las preferencias se guardan en <code>localStorage</code> y se sincronizan instantáneamente en toda la aplicación.</span>
+        <span style="font-size: 12px; font-family: 'JetBrains Mono', monospace; color: #38bdf8;">Atajo Global: [Alt] + [A]</span>
       </div>
     </section>
 

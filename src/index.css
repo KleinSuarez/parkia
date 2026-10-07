@@ -4911,45 +4911,185 @@ html.a11y-reduced-motion *::after {
   transition-duration: 0.001ms !important;
 }
 
-/* ── 10. Botón Disparador Flotante de Accesibilidad ── */
-.a11y-floating-trigger {
-  position: fixed;
-  bottom: 24px;
-  left: 24px;
-  width: 54px;
-  height: 54px;
+/* ── 10. Botón Flotante Integrado en Dispositivo Móvil (.phone-device) ── */
+.phone-a11y-fab {
+  position: absolute;
+  bottom: 82px;
+  right: 18px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: #0f766e;
   color: #ffffff;
-  border: 3px solid #2dd4bf;
-  box-shadow: 0 8px 24px rgba(15, 118, 110, 0.45);
+  border: 2px solid #2dd4bf;
+  box-shadow: 0 4px 16px rgba(15, 118, 110, 0.45);
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  z-index: 9999;
-  transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 35;
+  transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1);
 }
-.a11y-floating-trigger:hover {
+.phone-a11y-fab:hover {
+  transform: scale(1.08);
   background: #115e59;
-  transform: translateY(-3px) scale(1.05);
-  box-shadow: 0 12px 30px rgba(15, 118, 110, 0.6);
+  box-shadow: 0 6px 20px rgba(15, 118, 110, 0.6);
 }
-.a11y-floating-trigger:active {
-  transform: translateY(0) scale(0.96);
+.phone-a11y-fab:active {
+  transform: scale(0.95);
 }
-.a11y-trigger-icon {
+
+/* ── 11. Botón Píldora en Header Móvil y Auth ── */
+.mobile-a11y-pill,
+.auth-a11y-pill {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #f0fdfa;
+  border: 1.5px solid #99f6e4;
+  color: #0f766e;
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  transition: all 160ms ease;
+  flex-shrink: 0;
 }
-.a11y-trigger-badge {
-  font-size: 8px;
-  font-weight: 850;
-  letter-spacing: 0.4px;
+.mobile-a11y-pill:hover,
+.auth-a11y-pill:hover {
+  background: #ccfbf1;
+  border-color: #2dd4bf;
+  transform: scale(1.06);
+}
+
+/* ── 12. Botón de Accesibilidad en Barra Lateral del Operario ── */
+.sidebar-a11y-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: rgba(15, 118, 110, 0.18);
+  border: 1px solid rgba(45, 212, 191, 0.35);
+  border-radius: 10px;
   color: #ccfbf1;
-  margin-top: 1px;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  font-family: inherit;
+  transition: all 160ms ease;
+  margin-bottom: 8px;
+}
+.sidebar-a11y-btn:hover {
+  background: rgba(15, 118, 110, 0.35);
+  border-color: #2dd4bf;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+.sidebar-a11y-btn span {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.sidebar-a11y-btn strong {
+  font-size: 13px;
+  line-height: 1.2;
+}
+.sidebar-a11y-btn small {
+  font-size: 11px;
+  color: #99f6e4;
+  opacity: 0.85;
+}
+
+/* ── 13. Estilos Adaptados para Mobile Bottom Sheet (.a11y-mobile-sheet) ── */
+.a11y-mobile-sheet {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  max-height: 78% !important;
+  border-radius: 28px 28px 0 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+.a11y-mobile-sheet .sheet-header {
+  flex-shrink: 0;
+}
+.a11y-mobile-sheet .a11y-sheet-scrollable-body {
+  overflow-y: auto !important;
+  flex: 1 !important;
+  min-height: 0 !important;
+  padding-bottom: 24px !important;
+}
+.a11y-mobile-sheet .a11y-section-title {
+  color: #0f766e !important;
+}
+.a11y-mobile-sheet .a11y-btn-action {
+  background: #f0fdfa !important;
+  border: 1.5px solid #0f766e !important;
+  color: #0f766e !important;
+}
+.a11y-mobile-sheet .a11y-btn-action:hover:not(:disabled) {
+  background: #0f766e !important;
+  color: #ffffff !important;
+}
+.a11y-mobile-sheet .a11y-chip-btn {
+  background: #f8fafc !important;
+  border: 1.5px solid #cbd5e1 !important;
+}
+.a11y-mobile-sheet .a11y-chip-btn strong {
+  color: #0f172a !important;
+}
+.a11y-mobile-sheet .a11y-chip-btn span {
+  color: #64748b !important;
+}
+.a11y-mobile-sheet .a11y-chip-btn.active {
+  background: #e6fffa !important;
+  border-color: #0f766e !important;
+}
+.a11y-mobile-sheet .a11y-chip-btn.active strong {
+  color: #0f766e !important;
+}
+.a11y-mobile-sheet .a11y-desc-note {
+  color: #556764 !important;
+}
+.a11y-mobile-sheet .a11y-checkbox-row {
+  background: #f8fafc !important;
+  border: 1.5px solid #e2e8f0 !important;
+}
+.a11y-mobile-sheet .a11y-checkbox-row strong {
+  color: #0f172a !important;
+}
+.a11y-mobile-sheet .a11y-checkbox-row p {
+  color: #64748b !important;
+}
+.a11y-mobile-sheet .a11y-panel-footer {
+  background: #f8fafc !important;
+  border-top: 1px solid #e2e8f0 !important;
+  border-radius: 10px;
+}
+.a11y-mobile-sheet .a11y-btn-reset {
+  color: #556764 !important;
+  border-color: #cbd5e1 !important;
+}
+.a11y-mobile-sheet .a11y-btn-reset:hover {
+  color: #0f766e !important;
+  border-color: #0f766e !important;
+}
+
+/* ── 14. Modal de Operador (.a11y-operator-modal) ── */
+.a11y-operator-modal {
+  background: #0f172a !important;
+  color: #f8fafc !important;
+  border: 2px solid #334155 !important;
+  border-radius: 18px !important;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.75) !important;
+}
+.a11y-operator-modal .modal-head {
+  border-bottom: 1px solid #334155;
+}
+html.high-contrast-mode .a11y-operator-modal {
+  background: #000000 !important;
+  color: #facc15 !important;
+  border: 2px solid #facc15 !important;
 }
 
 /* ── 11. Panel Modal de Accesibilidad Universal ── */

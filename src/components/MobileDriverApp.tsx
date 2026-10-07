@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useParkiaStore, ParkingSpot, ParkingHistoryItem } from "../store/parkiaStore";
 import { Icon, Badge } from "./Icon";
 import { PaymentModal } from "./PaymentModal";
+import { AccessibilityWidget } from "./AccessibilityWidget";
 
 // ── Smooth Counter for currency ──
 function SmoothCounter({ value, formatValue }: { value: number; formatValue: (v: number) => string }) {
@@ -58,6 +59,7 @@ export function MobileDriverApp({
   const [addVehicleSheet, setAddVehicleSheet] = useState(false);
   const [editProfileSheet, setEditProfileSheet] = useState(false);
   const [vehicleSelectorSheet, setVehicleSelectorSheet] = useState(false);
+  const [a11ySheetOpen, setA11ySheetOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Form states for add vehicle
@@ -222,18 +224,29 @@ export function MobileDriverApp({
               </div>
             </button>
 
-            {primaryVehicle && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {primaryVehicle && (
+                <button
+                  type="button"
+                  className="vehicle-selector-pill"
+                  onClick={() => setVehicleSelectorSheet(true)}
+                  title="Cambiar vehículo activo"
+                >
+                  <Icon name="car" size={14} />
+                  <span>{primaryVehicle.plate}</span>
+                  <Icon name="chevron" size={12} />
+                </button>
+              )}
               <button
                 type="button"
-                className="vehicle-selector-pill"
-                onClick={() => setVehicleSelectorSheet(true)}
-                title="Cambiar vehículo activo"
+                className="mobile-a11y-pill"
+                onClick={() => setA11ySheetOpen(true)}
+                title="Herramientas de Accesibilidad Universal (Alt + A)"
+                aria-label="Abrir herramientas de accesibilidad universal"
               >
-                <Icon name="car" size={14} />
-                <span>{primaryVehicle.plate}</span>
-                <Icon name="chevron" size={12} />
+                <span aria-hidden="true">♿</span>
               </button>
-            )}
+            </div>
           </header>
 
           {/* Toast Notificación Móvil */}
@@ -579,6 +592,27 @@ export function MobileDriverApp({
                   >
                     <i />
                   </span>
+                </div>
+
+                <div
+                  className="preference"
+                  style={{ cursor: "pointer" }}
+                  onClick={() => setA11ySheetOpen(true)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setA11ySheetOpen(true);
+                    }
+                  }}
+                  aria-label="Abrir panel de Accesibilidad Universal y Asistencia Visual"
+                >
+                  <div>
+                    <strong>♿ Accesibilidad y Asistencia</strong>
+                    <small>Zoom, alto contraste, daltonismos y voz TTS</small>
+                  </div>
+                  <Icon name="chevron" size={16} />
                 </div>
 
                 <button
@@ -939,6 +973,14 @@ export function MobileDriverApp({
         {payingSession && (
           <PaymentModal session={payingSession} onClose={() => setPayingSession(null)} />
         )}
+
+        {/* ════ WIDGET / SHEET DE ACCESIBILIDAD UNIVERSAL INTEGRADO EN EL MÓVIL ════ */}
+        <AccessibilityWidget
+          variant="mobile"
+          isOpen={a11ySheetOpen}
+          onClose={() => setA11ySheetOpen(false)}
+          onOpen={() => setA11ySheetOpen(true)}
+        />
       </div>
     </div>
   );
