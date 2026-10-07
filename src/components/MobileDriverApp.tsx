@@ -3,6 +3,7 @@ import { useParkiaStore, ParkingSpot, ParkingHistoryItem } from "../store/parkia
 import { Icon, Badge } from "./Icon";
 import { PaymentModal } from "./PaymentModal";
 import { AccessibilityWidget } from "./AccessibilityWidget";
+import { downloadTicket } from "../utils/ticketDownload";
 
 // ── Smooth Counter for currency ──
 function SmoothCounter({ value, formatValue }: { value: number; formatValue: (v: number) => string }) {
@@ -155,6 +156,10 @@ export function MobileDriverApp({
   const minutes = elapsedMin % 60;
   const timeFormatted = `${String(hours).padStart(2, "0")} h ${String(minutes).padStart(2, "0")} min`;
 
+  const lastPaidSession = state.history.find(
+    (h) => h.plate === (activeSession?.plate || primaryVehicle?.plate) && h.status === "paid"
+  );
+
   // Map spots
   const floorSpots = state.spots.filter((s) => s.floor === mapFloor);
   const visibleSpots = floorSpots.filter((s) => {
@@ -279,43 +284,137 @@ export function MobileDriverApp({
           {/* ════ TAB 1: INICIO (HOME GLANCEABLE) ════ */}
           {tab === "inicio" && (
             <div className="mobile-page-content">
-              {/* Tarjeta de Sesión Activa (Glanceable Driving Widget) */}
-              <section className="mobile-session-card">
-                <div className="mobile-session-top">
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span className="live-dot" />
-                    <Badge tone="green">Estancia Activa</Badge>
+              {/* Tarjeta de Sesión Activa o Liquidada */}
+              {activeSession?.status === "completed" ? (
+                <section className="mobile-session-card" style={{ border: "1px solid #10b981", background: "linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)" }}>
+                  <div className="mobile-session-top">
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span className="live-dot" style={{ background: "#10b981" }} />
+                      <Badge tone="green">Estancia Liquidada</Badge>
+                    </div>
+                    <span className="mobile-plate-badge">{activeSession?.plate || "JHT · 482"}</span>
                   </div>
-                  <span className="mobile-plate-badge">{activeSession?.plate || "JHT · 482"}</span>
-                </div>
 
-                <div className="mobile-session-metrics">
-                  <div className="mobile-session-metric">
-                    <span>Tiempo transcurrido</span>
-                    <strong>{timeFormatted}</strong>
-                    <small style={{ fontSize: 9, color: "#879996" }}>
-                      Entrada: {activeSession?.entryTime || "08:42 a. m."}
-                    </small>
+                  <div className="mobile-session-metrics">
+                    <div className="mobile-session-metric">
+                      <span>Pase de Salida</span>
+                      <strong style={{ color: "#065f46" }}>15 min restantes</strong>
+                      <small style={{ fontSize: 9, color: "#047857" }}>
+                        Talanqueras habilitadas
+                      </small>
+                    </div>
+                    <div className="mobile-session-metric cost">
+                      <span>Total pagado</span>
+                      <strong>{currencyFmt.format(activeSession.totalCost)}</strong>
+                      <small style={{ fontSize: 9, color: "#047857" }}>
+                        {timeFormatted}
+                      </small>
+                    </div>
                   </div>
-                  <div className="mobile-session-metric cost">
-                    <span>Costo acumulado</span>
-                    <strong>
-                      <SmoothCounter value={targetSessionCost} formatValue={(v) => currencyFmt.format(v)} />
-                    </strong>
-                    <small style={{ fontSize: 9, color: "#0d766e" }}>
-                      Tarifa: ${currentRate} / min
-                    </small>
-                  </div>
-                </div>
 
-                <button
-                  type="button"
-                  className="primary sheet-cta-btn"
-                  onClick={() => setTab("pagos")}
-                >
-                  <Icon name="card" size={18} /> Ver desglose o pagar
-                </button>
-              </section>
+                  <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+                    <button
+                      type="button"
+                      className="secondary sheet-cta-btn"
+                      style={{ flex: 1, padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                      onClick={() => {
+                        const tData = lastPaidSession || {
+                          id: "SES-SALIDA",
+                          plate: activeSession.plate,
+                          entryTime: activeSession.entryTime,
+                          duration: timeFormatted,
+                          total: activeSession.totalCost,
+                          method: "Tarjeta / App Móvil",
+                          qrCode: `QR-PARKIA-EXIT-${activeSession.plate.replace(/[^A-Za-z0-9]/g, "")}`,
+                        };
+                        downloadTicket({
+                          id: tData.id,
+                          plate: tData.plate,
+                          entryTime: tData.date || activeSession.entryTime,
+                          exitTime: new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" }),
+                          duration: tData.duration,
+                          total: tData.total,
+                          method: tData.method || "App Móvil",
+                          qrCode: tData.qrCode,
+                        });
+                        showToast("Descargando tique digital...");
+                      }}
+                    >
+                      <Icon name="download" size={16} /> Descargar Tique
+                    </button>
+                    <button
+                      type="button"
+                      className="primary sheet-cta-btn"
+                      style={{ flex: 1, padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                      onClick={() => {
+                        if (lastPaidSession) {
+                          setPayingSession(lastPaidSession);
+                        } else {
+                          setPayingSession({
+                            id: "SES-SALIDA",
+                            date: "Hoy, " + activeSession.entryTime,
+                            plate: activeSession.plate,
+                            duration: timeFormatted,
+                            durationMinutes: activeSession.elapsedMinutes,
+                            status: "paid",
+                            total: activeSession.totalCost,
+                            qrCode: `QR-PARKIA-EXIT-${activeSession.plate.replace(/[^A-Za-z0-9]/g, "")}`,
+                          });
+                        }
+                      }}
+                    >
+                      <Icon name="card" size={16} /> Ver QR Salida
+                    </button>
+                  </div>
+                </section>
+              ) : (
+                <section className="mobile-session-card">
+                  <div className="mobile-session-top">
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span className="live-dot" />
+                      <Badge tone="green">Estancia Activa</Badge>
+                    </div>
+                    <span className="mobile-plate-badge">{activeSession?.plate || "JHT · 482"}</span>
+                  </div>
+
+                  <div className="mobile-session-metrics">
+                    <div className="mobile-session-metric">
+                      <span>Tiempo transcurrido</span>
+                      <strong>{timeFormatted}</strong>
+                      <small style={{ fontSize: 9, color: "#879996" }}>
+                        Entrada: {activeSession?.entryTime || "08:42 a. m."}
+                      </small>
+                    </div>
+                    <div className="mobile-session-metric cost">
+                      <span>Costo acumulado</span>
+                      <strong>
+                        <SmoothCounter value={targetSessionCost} formatValue={(v) => currencyFmt.format(v)} />
+                      </strong>
+                      <small style={{ fontSize: 9, color: "#0d766e" }}>
+                        Tarifa: ${currentRate} / min
+                      </small>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="primary sheet-cta-btn"
+                    onClick={() => {
+                      setPayingSession({
+                        id: "SES-ACTIVA",
+                        date: "Hoy, " + (activeSession?.entryTime || "08:42 a. m."),
+                        plate: activeSession?.plate || "JHT · 482",
+                        duration: timeFormatted,
+                        durationMinutes: elapsedMin,
+                        status: "pending",
+                        total: targetSessionCost,
+                      });
+                    }}
+                  >
+                    <Icon name="card" size={18} /> Pagar y Finalizar Estancia
+                  </button>
+                </section>
+              )}
 
               {/* Atajos táctiles de un solo toque */}
               <div className="mobile-quick-actions">
@@ -648,7 +747,59 @@ export function MobileDriverApp({
                 <Icon name="card" size={28} />
               </div>
 
-              <h4 style={{ margin: "8px 0 0", fontSize: 15 }}>Sesiones Recientes</h4>
+              {/* Estancia en Curso para Pagar */}
+              {activeSession && activeSession.status === "active" && (
+                <div
+                  style={{
+                    background: "#ffffff",
+                    borderRadius: 14,
+                    padding: 16,
+                    border: "2px solid #0d766e",
+                    boxShadow: "0 4px 14px rgba(13, 118, 110, 0.12)",
+                    marginTop: 12,
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span className="live-dot" />
+                      <strong style={{ fontSize: 14, color: "#0d766e" }}>Estancia en Curso</strong>
+                    </div>
+                    <span className="plate-small">{activeSession.plate}</span>
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "space-between", margin: "12px 0 14px", alignItems: "baseline" }}>
+                    <div>
+                      <small style={{ color: "#667774", display: "block" }}>Tiempo acumulado</small>
+                      <strong style={{ fontSize: 15, color: "#142523" }}>{timeFormatted}</strong>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <small style={{ color: "#667774", display: "block" }}>Total a liquidar</small>
+                      <strong style={{ fontSize: 18, color: "#0d766e" }}>{currencyFmt.format(targetSessionCost)}</strong>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="primary full"
+                    style={{ height: 44, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+                    onClick={() => {
+                      setPayingSession({
+                        id: "SES-ACTIVA",
+                        date: "Hoy, " + activeSession.entryTime,
+                        plate: activeSession.plate,
+                        duration: timeFormatted,
+                        durationMinutes: activeSession.elapsedMinutes,
+                        status: "pending",
+                        total: targetSessionCost,
+                      });
+                    }}
+                  >
+                    <Icon name="card" size={16} /> Pagar y Finalizar Estancia
+                  </button>
+                </div>
+              )}
+
+              <h4 style={{ margin: "14px 0 0", fontSize: 15 }}>Sesiones Recientes</h4>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {state.history.map((h) => (
@@ -683,11 +834,37 @@ export function MobileDriverApp({
                       <button className="primary compact" onClick={() => setPayingSession(h)}>
                         Pagar ahora
                       </button>
-                    ) : h.qrCode ? (
-                      <button className="secondary compact" onClick={() => setPayingSession(h)}>
-                        Ver Tique QR
-                      </button>
-                    ) : null}
+                    ) : (
+                      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                        {h.qrCode && (
+                          <button
+                            type="button"
+                            className="secondary compact"
+                            title="Descargar tique"
+                            style={{ padding: "6px 8px", display: "inline-flex", alignItems: "center", gap: 4 }}
+                            onClick={() => {
+                              downloadTicket({
+                                id: h.id,
+                                plate: h.plate,
+                                entryTime: h.date,
+                                exitTime: new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" }),
+                                duration: h.duration,
+                                total: h.total,
+                                method: h.method,
+                                qrCode: h.qrCode,
+                              });
+                              showToast(`Descargando tique ${h.plate}...`);
+                            }}
+                            aria-label={`Descargar tique digital de ${h.plate}`}
+                          >
+                            <Icon name="download" size={14} />
+                          </button>
+                        )}
+                        <button className="secondary compact" onClick={() => setPayingSession(h)}>
+                          Ver QR
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

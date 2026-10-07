@@ -961,20 +961,64 @@ export const parkiaActions = {
     emitChange();
   },
 
+  // Flujo U4: Finalizar estancia activa y pagar
+  payActiveSession(paymentMethod: string): { success: boolean; qrCode: string; historyItem?: ParkingHistoryItem } {
+    if (!currentState.activeSession) {
+      return { success: false, qrCode: "" };
+    }
+
+    const sess = currentState.activeSession;
+    const sessionCost = sess.totalCost || 9750;
+    const cleanPlate = sess.plate.replace(/[^A-Za-z0-9]/g, "");
+    const qr = `QR-PARKIA-EXIT-${cleanPlate}-${Date.now().toString(36).toUpperCase()}`;
+    const id = `SES-${Math.floor(93850 + Math.random() * 500)}`;
+
+    const newHistoryItem: ParkingHistoryItem = {
+      id,
+      date: "Hoy, " + new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" }),
+      plate: sess.plate,
+      duration: `${Math.floor(sess.elapsedMinutes / 60)} h ${sess.elapsedMinutes % 60} min`,
+      durationMinutes: sess.elapsedMinutes,
+      status: "paid",
+      total: sessionCost,
+      method: paymentMethod,
+      qrCode: qr,
+    };
+
+    currentState = {
+      ...currentState,
+      activeSession: {
+        ...sess,
+        status: "completed",
+        totalCost: sessionCost,
+      },
+      history: [newHistoryItem, ...currentState.history],
+      todayRevenue: currentState.todayRevenue + sessionCost,
+    };
+    emitChange();
+    return { success: true, qrCode: qr, historyItem: newHistoryItem };
+  },
+
   // Flujo U4: Pagar sesión pendiente o activa
-  paySession(sessionId: string, paymentMethod: string): { success: boolean; qrCode: string } {
+  paySession(sessionId: string, paymentMethod: string): { success: boolean; qrCode: string; historyItem?: ParkingHistoryItem } {
+    if (sessionId === "SES-ACTIVA" || (currentState.activeSession && sessionId === currentState.activeSession.plate)) {
+      return this.payActiveSession(paymentMethod);
+    }
+
     const qr = `QR-PARKIA-${sessionId}-${Date.now().toString(36).toUpperCase()}`;
     let paidAmount = 0;
+    let foundItem: ParkingHistoryItem | undefined;
 
     const updatedHistory = currentState.history.map((h) => {
       if (h.id === sessionId) {
         paidAmount = h.total;
-        return {
+        foundItem = {
           ...h,
           status: "paid" as const,
           method: paymentMethod,
           qrCode: qr,
         };
+        return foundItem;
       }
       return h;
     });
@@ -985,7 +1029,7 @@ export const parkiaActions = {
       todayRevenue: currentState.todayRevenue + paidAmount,
     };
     emitChange();
-    return { success: true, qrCode: qr };
+    return { success: true, qrCode: qr, historyItem: foundItem };
   },
 
   // Flujo O2: Abrir talanquera manualmente

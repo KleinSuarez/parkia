@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParkiaStore, ParkedVehicleSession } from "../store/parkiaStore";
 import { Icon, Badge } from "./Icon";
+import { downloadTicket } from "../utils/ticketDownload";
 
 export function CashierDesk() {
   const [state, actions] = useParkiaStore();
@@ -543,11 +544,40 @@ export function CashierDesk() {
             </div>
 
             <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
-              <button className="secondary full" onClick={() => window.print()}>
-                <Icon name="print" size={16} /> Imprimir Ticket
+              <button
+                type="button"
+                className="secondary"
+                style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                onClick={() =>
+                  downloadTicket({
+                    id: paidReceipt.ticketCode || `REC-${Date.now().toString(36).toUpperCase()}`,
+                    plate: paidReceipt.plate,
+                    entryTime: paidReceipt.entryTime || "08:00 a. m.",
+                    exitTime: paidReceipt.paidAt,
+                    duration: paidReceipt.duration || "Estancia parqueadero",
+                    total: paidReceipt.finalTotal,
+                    method: paidReceipt.method,
+                    qrCode: paidReceipt.qrCode,
+                  })
+                }
+              >
+                <Icon name="download" size={16} /> Descargar Ticket
               </button>
-              <button className="primary full" onClick={() => setPaidReceipt(null)}>
-                Aceptar y Continuar
+              <button
+                type="button"
+                className="secondary"
+                style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                onClick={() => window.print()}
+              >
+                <Icon name="print" size={16} /> Imprimir
+              </button>
+              <button
+                type="button"
+                className="primary"
+                style={{ flex: 1 }}
+                onClick={() => setPaidReceipt(null)}
+              >
+                Continuar
               </button>
             </div>
           </div>
@@ -639,8 +669,27 @@ export function CashierDesk() {
                   <Icon name="grid" size={60} />
                   <div style={{ fontSize: 11, fontWeight: 700, marginTop: 4 }}>{entrySuccess.ticketCode}</div>
                 </div>
-                <div style={{ marginTop: 14 }}>
+                <div style={{ marginTop: 14, display: "flex", gap: 10, justifyContent: "center", alignItems: "center" }}>
                   <Badge tone="green">Talanquera Levantada (6s)</Badge>
+                  <button
+                    type="button"
+                    className="secondary compact"
+                    style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
+                    onClick={() =>
+                      downloadTicket({
+                        id: entrySuccess.ticketCode,
+                        plate: entrySuccess.plate,
+                        entryTime: entrySuccess.entryTime,
+                        duration: "Recién ingresado",
+                        total: 0,
+                        spot: `${entrySuccess.floor} · ${entrySuccess.spotCode}`,
+                        branch: entrySuccess.accessGate,
+                        qrCode: entrySuccess.ticketCode,
+                      })
+                    }
+                  >
+                    <Icon name="download" size={14} /> Descargar Ticket
+                  </button>
                 </div>
               </div>
             ) : (

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Icon, Badge } from "./Icon";
 import { parkiaActions, ParkingHistoryItem } from "../store/parkiaStore";
+import { downloadTicket, printTicket } from "../utils/ticketDownload";
 
 export function PaymentModal({
   session,
@@ -13,6 +14,7 @@ export function PaymentModal({
   const [method, setMethod] = useState<"visa" | "nequi" | "pse" | "cash">("visa");
   const [processing, setProcessing] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(session.qrCode || null);
+  const [paidItem, setPaidItem] = useState<ParkingHistoryItem | null>(null);
 
   function dismiss() {
     setClosing(true);
@@ -39,6 +41,9 @@ export function PaymentModal({
       const res = parkiaActions.paySession(session.id, methodName);
       setProcessing(false);
       setQrCode(res.qrCode);
+      if (res.historyItem) {
+        setPaidItem(res.historyItem);
+      }
     }, 1200);
   }
 
@@ -221,10 +226,70 @@ export function PaymentModal({
                 </small>
               </div>
 
-              <div className="modal-actions" style={{ justifyContent: "center", marginTop: 20 }}>
+              <div className="modal-actions" style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 16 }}>
+                <div style={{ display: "flex", gap: 8, width: "100%" }}>
+                  <button
+                    type="button"
+                    className="secondary"
+                    style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                    onClick={() => {
+                      const tItem = paidItem || session;
+                      downloadTicket({
+                        id: tItem.id === "SES-ACTIVA" ? "SES-SALIDA" : tItem.id,
+                        plate: tItem.plate,
+                        entryTime: tItem.date || "08:42 a. m.",
+                        exitTime: new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" }),
+                        duration: tItem.duration,
+                        total: tItem.total,
+                        method:
+                          tItem.method ||
+                          (method === "visa"
+                            ? "Visa terminada en 2481"
+                            : method === "nequi"
+                            ? "Nequi QR"
+                            : method === "pse"
+                            ? "PSE Bancolombia"
+                            : "Efectivo en cajero"),
+                        qrCode: qrCode || tItem.qrCode,
+                      });
+                    }}
+                    aria-label="Descargar tique digital como comprobante HTML"
+                  >
+                    <Icon name="download" size={16} /> Descargar Tique
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary"
+                    style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                    onClick={() => {
+                      const tItem = paidItem || session;
+                      printTicket({
+                        id: tItem.id === "SES-ACTIVA" ? "SES-SALIDA" : tItem.id,
+                        plate: tItem.plate,
+                        entryTime: tItem.date || "08:42 a. m.",
+                        exitTime: new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" }),
+                        duration: tItem.duration,
+                        total: tItem.total,
+                        method:
+                          tItem.method ||
+                          (method === "visa"
+                            ? "Visa terminada en 2481"
+                            : method === "nequi"
+                            ? "Nequi QR"
+                            : method === "pse"
+                            ? "PSE Bancolombia"
+                            : "Efectivo en cajero"),
+                        qrCode: qrCode || tItem.qrCode,
+                      });
+                    }}
+                    aria-label="Imprimir tique o guardar como archivo PDF"
+                  >
+                    <Icon name="print" size={16} /> Imprimir / PDF
+                  </button>
+                </div>
                 <button
                   type="button"
-                  className="primary"
+                  className="primary full"
                   onClick={dismiss}
                   aria-label="Cerrar tique digital y regresar al panel de parqueadero"
                 >

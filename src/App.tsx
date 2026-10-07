@@ -8,6 +8,7 @@ import { CashierDesk } from "./components/CashierDesk";
 import { YardControl } from "./components/YardControl";
 import { ShiftManager } from "./components/ShiftManager";
 import { AccessibilityWidget } from "./components/AccessibilityWidget";
+import { downloadTicket } from "./utils/ticketDownload";
 
 // ── COMPONENTES REUTILIZABLES DE ANIMACIÓN Y ACCESIBILIDAD ──
 function AnimatedValue({
@@ -1272,6 +1273,65 @@ function History() {
         />
       </div>
 
+      {/* Banner de liquidación de estancia activa en curso */}
+      {state.activeSession && state.activeSession.status === "active" && (
+        <div
+          style={{
+            background: "#f0fdfa",
+            border: "2px solid #0d766e",
+            borderRadius: 12,
+            padding: "16px 20px",
+            marginBottom: 20,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 14,
+            boxShadow: "0 4px 12px rgba(13, 118, 110, 0.08)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ background: "#0d766e", color: "white", padding: 12, borderRadius: 10 }}>
+              <Icon name="car" size={24} />
+            </div>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span className="live-dot" />
+                <strong style={{ fontSize: 15, color: "#0d766e" }}>Estancia en Curso · {state.activeSession.plate}</strong>
+                <Badge tone="green">Activa en tiempo real</Badge>
+              </div>
+              <p style={{ margin: "4px 0 0", fontSize: 13, color: "#475569" }}>
+                Ingreso: {state.activeSession.entryTime} · {Math.floor(state.activeSession.elapsedMinutes / 60)} h {state.activeSession.elapsedMinutes % 60} min transcurridos · Tarifa: ${state.tariffs.carRate}/min
+              </p>
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div style={{ textAlign: "right" }}>
+              <span style={{ fontSize: 11, color: "#64748b", display: "block" }}>Total a liquidar:</span>
+              <strong style={{ fontSize: 20, color: "#0d766e" }}>{fmt.format(state.activeSession.totalCost)}</strong>
+            </div>
+            <button
+              type="button"
+              className="primary"
+              onClick={() => {
+                const elapsed = state.activeSession?.elapsedMinutes || 60;
+                setPayingSession({
+                  id: "SES-ACTIVA",
+                  date: "Hoy, " + (state.activeSession?.entryTime || "08:42 a. m."),
+                  plate: state.activeSession?.plate || "JHT · 482",
+                  duration: `${Math.floor(elapsed / 60)} h ${elapsed % 60} min`,
+                  durationMinutes: elapsed,
+                  status: "pending",
+                  total: state.activeSession?.totalCost || 9750,
+                });
+              }}
+            >
+              <Icon name="card" size={16} /> Pagar y Finalizar Estancia
+            </button>
+          </div>
+        </div>
+      )}
+
       <section className="table-card">
         <div className="table-head">
           <div>
@@ -1331,13 +1391,34 @@ function History() {
                     Pagar
                   </button>
                 ) : r.qrCode ? (
-                  <button
-                    className="secondary compact"
-                    onClick={() => setPayingSession(r)}
-                    title="Ver ticket QR"
-                  >
-                    Ver QR
-                  </button>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button
+                      className="icon-btn"
+                      onClick={() =>
+                        downloadTicket({
+                          id: r.id,
+                          plate: r.plate,
+                          entryTime: r.date,
+                          exitTime: new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" }),
+                          duration: r.duration,
+                          total: r.total,
+                          method: r.method,
+                          qrCode: r.qrCode,
+                        })
+                      }
+                      title="Descargar tique digital"
+                      aria-label={`Descargar tique digital de ${r.plate}`}
+                    >
+                      <Icon name="download" size={14} />
+                    </button>
+                    <button
+                      className="secondary compact"
+                      onClick={() => setPayingSession(r)}
+                      title="Ver ticket QR"
+                    >
+                      Ver QR
+                    </button>
+                  </div>
                 ) : (
                   <button className="icon-btn" aria-label="Ver detalles">
                     <Icon name="chevron" />
