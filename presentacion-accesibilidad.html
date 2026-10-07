@@ -231,23 +231,6 @@
       border-color: var(--parkia-border-strong);
     }
 
-    /* Banner Informativo de Despliegue en Vivo */
-    .live-deployment-banner {
-      background: linear-gradient(90deg, #ecfdf5 0%, #f0fdfa 100%);
-      border-bottom: 1px solid #a7f3d0;
-      padding: 10px 32px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 13px;
-      color: #065f46;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-    .live-deployment-banner strong {
-      color: #047857;
-      font-weight: 750;
-    }
     .live-url-code {
       background: #ffffff;
       border: 1px solid #a7f3d0;
@@ -297,8 +280,13 @@
       display: flex;
       gap: 6px;
       overflow-x: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
       padding-bottom: 2px;
       flex: 1;
+    }
+    .slide-tabs::-webkit-scrollbar {
+      display: none;
     }
 
     .tab-btn {
@@ -1066,19 +1054,6 @@
       </a>
     </div>
   </header>
-
-  <!-- Banner con Enlace en Vivo -->
-  <div class="live-deployment-banner">
-    <div>
-      <strong>🌐 Aplicación en Producción:</strong>
-      <span>La suite completa de Parkia está desplegada en GitHub Pages con soporte para lectores de pantalla, conductores y operarios.</span>
-    </div>
-    <div>
-      <a href="https://kleinsuarez.github.io/parkia/" target="_blank" rel="noopener noreferrer" class="live-url-code">
-        https://kleinsuarez.github.io/parkia/ ↗
-      </a>
-    </div>
-  </div>
 
   <!-- Matrices SVG de Daltonismo Calibradas (GPU) -->
   <svg style="display:none;" aria-hidden="true">
