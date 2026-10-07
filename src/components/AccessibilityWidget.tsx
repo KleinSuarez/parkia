@@ -101,7 +101,7 @@ export function useA11yState() {
     root.classList.toggle("a11y-reduced-motion", settings.reducedMotion);
   }, [settings]);
 
-  // Asistente Lector de Pantalla (Web Speech API)
+  // Asistente Lector de Pantalla Universal (Web Speech API)
   useEffect(() => {
     if (!settings.speechEnabled || typeof window === "undefined" || !("speechSynthesis" in window)) {
       window.speechSynthesis?.cancel();
@@ -112,18 +112,97 @@ export function useA11yState() {
       if (!text || text.trim() === "") return;
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text.trim());
-      utterance.lang = "es-ES";
+      utterance.lang = "es-CO";
       utterance.rate = settings.speechRate;
+
+      // Buscar voz en español si el navegador las tiene cargadas
+      const voices = window.speechSynthesis.getVoices?.() || [];
+      const spanishVoice = voices.find((v) => v.lang.startsWith("es"));
+      if (spanishVoice) {
+        utterance.voice = spanishVoice;
+      }
+
       utterance.onstart = () => setActiveSpeechText(text.trim());
       utterance.onend = () => setActiveSpeechText("");
       window.speechSynthesis.speak(utterance);
     };
 
-    const handleFocusOrHover = (e: Event) => {
+    // Extractor universal inteligente de texto legible
+    const extractReadableText = (target: HTMLElement): string => {
+      if (!target) return "";
+
+      // 1. Si el elemento o algún ancestro interactivo tiene aria-label explícito
+      const labeled = target.closest<HTMLElement>("[aria-label]");
+      if (labeled && labeled.getAttribute("aria-label")?.trim()) {
+        return labeled.getAttribute("aria-label")!.trim();
+      }
+
+      // 2. Si es un botón, enlace o control interactivo
+      const interactive = target.closest<HTMLElement>("button, a, [role='button'], [role='tab'], [role='link']");
+      if (interactive) {
+        const isLink = interactive.tagName === "A" || interactive.getAttribute("role") === "link";
+        const text = interactive.innerText?.trim() || interactive.getAttribute("title") || "";
+        return `${isLink ? "Enlace" : "Botón"}: ${text || "sin etiqueta"}`;
+      }
+
+      // 3. Si es un campo de formulario (input, select, textarea)
+      const input = target.closest<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>("input, select, textarea");
+      if (input) {
+        let labelName = "";
+        if (input.id) {
+          const lTag = document.querySelector(`label[for="${input.id}"]`);
+          if (lTag) labelName = (lTag as HTMLElement).innerText?.trim() || "";
+        }
+        if (!labelName) {
+          labelName = input.closest("label")?.innerText?.trim() || "";
+        }
+        const placeholder = input.getAttribute("placeholder") || "";
+        const name = labelName || placeholder || input.name || "de texto";
+        const val = input.value?.trim() || "vacío";
+        return `Campo ${name}. Valor actual: ${val}`;
+      }
+
+      // 4. Si es un encabezado h1-h6
+      const heading = target.closest<HTMLElement>("h1, h2, h3, h4, h5, h6");
+      if (heading) {
+        return `Título: ${heading.innerText?.trim()}`;
+      }
+
+      // 5. Si es una tarjeta, estadística, insignia o badge
+      const badge = target.closest<HTMLElement>(".badge, .pill, [role='status'], .status-pill, .stat, .metric");
+      if (badge) {
+        return `Estado: ${badge.innerText?.trim()}`;
+      }
+
+      // 6. Si es una imagen o icono con alt o título
+      if (target.tagName === "IMG" || target.tagName === "svg" || target.closest("svg")) {
+        const img = (target.tagName === "IMG" ? target : target.closest("svg")) as HTMLElement;
+        const alt = img?.getAttribute("alt") || img?.getAttribute("title") || "";
+        if (alt) return `Icono: ${alt}`;
+      }
+
+      // 7. Texto directo de elementos semánticos (p, span, strong, li, td, th, div)
+      const directText = target.innerText?.trim() || target.textContent?.trim() || "";
+      if (directText) {
+        if (directText.length <= 250) {
+          return directText;
+        } else {
+          // Extraer la primera frase de bloques extensos
+          const firstSentence = directText.split(/[.\n]/)[0]?.trim();
+          if (firstSentence && firstSentence.length > 5) return firstSentence;
+        }
+      }
+
+      return "";
+    };
+
+    let hoverTimer: any = null;
+
+    const handleSpeechEvent = (e: Event, isDirectClick = false) => {
       const target = e.target as HTMLElement | null;
       if (!target) return;
 
-      // Ignorar si el evento ocurre dentro del panel de accesibilidad para no saturar
+      // Ignorar interacción dentro del panel de configuración de accesibilidad para no saturar
       if (
         target.closest(".a11y-mobile-sheet") ||
         target.closest(".a11y-operator-modal") ||
@@ -132,38 +211,35 @@ export function useA11yState() {
         return;
       }
 
-      let speech = "";
-      const ariaLabel = target.getAttribute("aria-label");
-      const title = target.getAttribute("title");
-      const alt = target.getAttribute("alt");
-      const role = target.getAttribute("role") || target.tagName.toLowerCase();
+      const text = extractReadableText(target);
+      if (!text) return;
 
-      if (ariaLabel) {
-        speech = ariaLabel;
-      } else if (alt) {
-        speech = `Imagen: ${alt}`;
-      } else if (title) {
-        speech = title;
-      } else if (target.tagName === "BUTTON" || target.tagName === "A") {
-        const text = target.innerText?.trim();
-        speech = `${role === "a" ? "Enlace" : "Botón"}: ${text || "sin etiqueta"}`;
-      } else if (target.tagName === "INPUT" || target.tagName === "SELECT") {
-        const placeholder = target.getAttribute("placeholder") || "";
-        const value = (target as HTMLInputElement).value || "";
-        speech = `Campo de entrada ${placeholder}. Valor actual: ${value || "vacío"}`;
-      }
-
-      if (speech && speech !== activeSpeechText) {
-        speak(speech);
+      if (isDirectClick) {
+        speak(text);
+      } else {
+        clearTimeout(hoverTimer);
+        hoverTimer = setTimeout(() => {
+          speak(text);
+        }, 120);
       }
     };
 
-    document.addEventListener("focusin", handleFocusOrHover);
+    const onFocusIn = (e: FocusEvent) => handleSpeechEvent(e, false);
+    const onClick = (e: MouseEvent) => handleSpeechEvent(e, true);
+    const onMouseOver = (e: MouseEvent) => handleSpeechEvent(e, false);
+
+    document.addEventListener("focusin", onFocusIn);
+    document.addEventListener("click", onClick, { capture: true });
+    document.addEventListener("mouseover", onMouseOver);
+
     return () => {
-      document.removeEventListener("focusin", handleFocusOrHover);
+      document.removeEventListener("focusin", onFocusIn);
+      document.removeEventListener("click", onClick, { capture: true });
+      document.removeEventListener("mouseover", onMouseOver);
+      clearTimeout(hoverTimer);
       window.speechSynthesis?.cancel();
     };
-  }, [settings.speechEnabled, settings.speechRate, activeSpeechText]);
+  }, [settings.speechEnabled, settings.speechRate]);
 
   const readCurrentPage = () => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) {
@@ -298,15 +374,27 @@ function A11yControls({
             <input
               type="checkbox"
               checked={settings.speechEnabled}
-              onChange={(e) => setSettings((s) => ({ ...s, speechEnabled: e.target.checked }))}
-              aria-label="Activar síntesis de voz en español para elementos enfocados"
+              onChange={(e) => {
+                const nextVal = e.target.checked;
+                setSettings((s) => ({ ...s, speechEnabled: nextVal }));
+                if (nextVal && typeof window !== "undefined" && "speechSynthesis" in window) {
+                  window.speechSynthesis.cancel();
+                  const u = new SpeechSynthesisUtterance(
+                    "Lector de voz activado. Ahora puedes hacer clic o tocar cualquier botón, tarjeta o texto para escucharlo."
+                  );
+                  u.lang = "es-CO";
+                  u.rate = settings.speechRate || 1.0;
+                  window.speechSynthesis.speak(u);
+                }
+              }}
+              aria-label="Activar síntesis de voz en español para todos los elementos"
             />
             <span className="slider round" aria-hidden="true" />
           </label>
         </div>
 
         <p className="a11y-desc-note">
-          Lee automáticamente los botones, formularios y datos conforme navegas con teclado o ratón.
+          Lee en voz alta cualquier botón, tarjeta, estadística o texto al hacer clic, enfocar o pasar el cursor sobre él.
         </p>
 
         <div className="a11y-speech-actions">
