@@ -58,7 +58,7 @@ export function PaymentModal({
         className="modal pay-modal"
         role="dialog"
         aria-modal="true"
-        aria-label="Confirmar pago de parqueadero"
+        aria-labelledby="pay-modal-title"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="pay-parallax-wrap">
@@ -69,8 +69,8 @@ export function PaymentModal({
 
         <div className="pay-content">
           <div className="modal-head">
-            <h2>{qrCode ? "Comprobante y Ticket de Salida" : "Confirmar liquidación"}</h2>
-            <button className="icon-btn" onClick={dismiss} aria-label="Cerrar modal">
+            <h2 id="pay-modal-title">{qrCode ? "Comprobante y Ticket de Salida" : "Confirmar liquidación"}</h2>
+            <button type="button" className="icon-btn" onClick={dismiss} aria-label="Cerrar ventana de pago y liquidación">
               <Icon name="close" />
             </button>
           </div>
@@ -139,13 +139,21 @@ export function PaymentModal({
               </div>
 
               <div className="modal-actions">
-                <button className="secondary" onClick={dismiss} disabled={processing}>
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={dismiss}
+                  disabled={processing}
+                  aria-label="Cancelar operación de pago y volver a la pantalla anterior"
+                >
                   Cancelar
                 </button>
                 <button
+                  type="button"
                   className="primary"
                   onClick={handleProcessPayment}
                   disabled={processing}
+                  aria-label={`Procesar pago de ${fmt.format(session.total)} mediante método seleccionado`}
                 >
                   {processing ? (
                     <>
@@ -214,7 +222,12 @@ export function PaymentModal({
               </div>
 
               <div className="modal-actions" style={{ justifyContent: "center", marginTop: 20 }}>
-                <button className="primary" onClick={dismiss}>
+                <button
+                  type="button"
+                  className="primary"
+                  onClick={dismiss}
+                  aria-label="Cerrar tique digital y regresar al panel de parqueadero"
+                >
                   Entendido, finalizar <Icon name="check" size={16} />
                 </button>
               </div>

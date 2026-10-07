@@ -1,0 +1,1876 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parkia · Principios de Accesibilidad Universal (WCAG 2.1 AA/AAA)</title>
+  
+  <!-- Tipografías Oficiales de Parkia -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=OpenDyslexic&display=swap" rel="stylesheet">
+
+  <style>
+    /* ==========================================================================
+       TOKENS DEL SISTEMA DE DISEÑO PARKIA (tokens-parqueadero.css)
+       ========================================================================== */
+    :root {
+      --parkia-teal-50: #f0fdfa;
+      --parkia-teal-100: #ccfbf1;
+      --parkia-teal-200: #99f6e4;
+      --parkia-teal-500: #14b8a6;
+      --parkia-teal-600: #0d9488;
+      --parkia-teal-700: #0f766e;
+      --parkia-teal-800: #115e59;
+      --parkia-teal-900: #134e4a;
+      
+      --parkia-primary: #0f766e;
+      --parkia-primary-hover: #115e59;
+      --parkia-secondary: #5d91c2;
+      --parkia-accent: #d55e83;
+
+      --parkia-bg: #f8fafc;
+      --parkia-surface: #ffffff;
+      --parkia-surface-subtle: #f1f5f9;
+      --parkia-border: #e2e8f0;
+      --parkia-border-strong: #cbd5e1;
+      
+      --parkia-text-main: #0f172a;
+      --parkia-text-muted: #64748b;
+      --parkia-text-light: #94a3b8;
+
+      /* Estados de Parqueadero */
+      --state-available: #10b981;
+      --state-available-bg: #ecfdf5;
+      --state-available-border: #a7f3d0;
+      --state-occupied: #ef4444;
+      --state-occupied-bg: #fef2f2;
+      --state-occupied-border: #fecaca;
+      --state-reserved: #f59e0b;
+      --state-reserved-bg: #fffbeb;
+      --state-reserved-border: #fde68a;
+      --state-maintenance: #6b7280;
+      --state-maintenance-bg: #f3f4f6;
+      --state-maintenance-border: #e5e7eb;
+
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 22px;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      --shadow-lg: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+      --shadow-elevated: 0 20px 40px -10px rgba(15, 23, 42, 0.12);
+
+      --font-scale: 1;
+    }
+
+    /* Reset y Fundamentos */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      background-color: var(--parkia-bg);
+      color: var(--parkia-text-main);
+      line-height: 1.55;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Enlace Accesible Skip to Content */
+    .skip-link {
+      position: absolute;
+      top: -60px;
+      left: 20px;
+      background: var(--parkia-teal-800);
+      color: #ffffff;
+      font-weight: 700;
+      padding: 12px 20px;
+      border-radius: 0 0 var(--radius-md) var(--radius-md);
+      z-index: 10000;
+      text-decoration: none;
+      box-shadow: var(--shadow-lg);
+      transition: top 200ms ease;
+    }
+    .skip-link:focus {
+      top: 0;
+      outline: 3px solid #38bdf8;
+      outline-offset: 2px;
+    }
+
+    /* Barra Superior Oficial Parkia */
+    .parkia-topbar {
+      background: #ffffff;
+      border-bottom: 1px solid var(--parkia-border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: 12px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    }
+
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-badge {
+      width: 40px;
+      height: 40px;
+      background: var(--parkia-primary);
+      color: #ffffff;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      box-shadow: 0 3px 10px rgba(15, 118, 110, 0.3);
+      user-select: none;
+    }
+
+    .brand-info h1 {
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: -0.4px;
+      color: var(--parkia-text-main);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-info p {
+      font-size: 12px;
+      color: var(--parkia-text-muted);
+      font-weight: 500;
+    }
+
+    .tag-wcag-badge {
+      background: var(--parkia-teal-50);
+      color: var(--parkia-teal-700);
+      border: 1px solid var(--parkia-teal-200);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .pulsing-dot {
+      width: 7px;
+      height: 7px;
+      background: #10b981;
+      border-radius: 50%;
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+      animation: pulseGreen 2s infinite;
+    }
+
+    @keyframes pulseGreen {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { transform: scale(1); box-shadow: 0 0 0 7px rgba(16, 185, 129, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    /* Enlaces Principales de Despliegue en Header */
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn-pages-live {
+      background: var(--parkia-primary);
+      color: #ffffff;
+      text-decoration: none;
+      font-size: 13.5px;
+      font-weight: 700;
+      padding: 9px 18px;
+      border-radius: var(--radius-sm);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 2px 8px rgba(15, 118, 110, 0.25);
+      transition: all 180ms ease;
+    }
+    .btn-pages-live:hover {
+      background: var(--parkia-primary-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(15, 118, 110, 0.35);
+    }
+
+    .btn-secondary-link {
+      background: #ffffff;
+      color: var(--parkia-text-main);
+      border: 1px solid var(--parkia-border);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 160ms ease;
+    }
+    .btn-secondary-link:hover {
+      background: var(--parkia-surface-subtle);
+      border-color: var(--parkia-border-strong);
+    }
+
+    .live-url-code {
+      background: #ffffff;
+      border: 1px solid #a7f3d0;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      color: #0f766e;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-weight: 600;
+    }
+    .live-url-code:hover {
+      background: #f0fdfa;
+      text-decoration: underline;
+    }
+
+    /* Contenedor Principal */
+    main {
+      flex: 1;
+      max-width: 1280px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 28px 24px 60px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Barra de Navegación de Diapositivas (Segmented Tab Control Estilo Parkia) */
+    .deck-nav-wrapper {
+      background: #ffffff;
+      border: 1px solid var(--parkia-border);
+      border-radius: var(--radius-lg);
+      padding: 8px 12px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .slide-tabs {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      padding-bottom: 2px;
+      flex: 1;
+    }
+    .slide-tabs::-webkit-scrollbar {
+      display: none;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--parkia-text-muted);
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+      transition: all 160ms ease;
+    }
+    .tab-btn:hover {
+      background: var(--parkia-surface-subtle);
+      color: var(--parkia-text-main);
+    }
+    .tab-btn.active {
+      background: var(--parkia-teal-50);
+      color: var(--parkia-primary);
+      border-color: var(--parkia-teal-200);
+      font-weight: 750;
+      box-shadow: 0 1px 2px rgba(15, 118, 110, 0.08);
+    }
+
+    .deck-status-pill {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--parkia-teal-800);
+      background: var(--parkia-teal-50);
+      border: 1px solid var(--parkia-teal-200);
+      padding: 6px 14px;
+      border-radius: 30px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    /* Tarjeta Principal de Diapositiva */
+    .slide-viewport {
+      background: var(--parkia-surface);
+      border: 1px solid var(--parkia-border);
+      border-radius: var(--radius-xl);
+      padding: 36px 40px;
+      box-shadow: var(--shadow-lg);
+      min-height: 580px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .slide-card {
+      display: none;
+      flex-direction: column;
+      flex: 1;
+      animation: slideIn 220ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .slide-card.active {
+      display: flex;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Encabezado de Diapositiva */
+    .slide-header {
+      border-bottom: 1px solid var(--parkia-border);
+      padding-bottom: 20px;
+      margin-bottom: 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .slide-eyebrow {
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--parkia-primary);
+      display: inline-block;
+      margin-bottom: 6px;
+    }
+
+    .slide-title {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--parkia-text-main);
+      line-height: 1.25;
+    }
+
+    .slide-subtitle {
+      font-size: 14.5px;
+      color: var(--parkia-text-muted);
+      margin-top: 6px;
+      max-width: 860px;
+    }
+
+    /* Componentes Específicos para Diapositivas */
+    /* Diapositiva 1: Diagnóstico y Brechas */
+    .problem-solution-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+      margin-bottom: 28px;
+    }
+
+    .feedback-card {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      position: relative;
+    }
+    .feedback-card-title {
+      color: #991b1b;
+      font-size: 15px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .user-quote-box {
+      background: #ffffff;
+      border-left: 4px solid #ef4444;
+      padding: 12px 16px;
+      border-radius: 4px;
+      font-style: italic;
+      font-size: 14px;
+      color: #1f2937;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .solution-card {
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      border-radius: var(--radius-lg);
+      padding: 24px;
+    }
+    .solution-card-title {
+      color: #065f46;
+      font-size: 15px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .gap-items-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-size: 13.5px;
+    }
+    .gap-items-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      color: var(--parkia-text-main);
+    }
+    .gap-badge-danger {
+      background: #fee2e2;
+      color: #b91c1c;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 4px;
+      white-space: nowrap;
+      margin-top: 2px;
+    }
+    .gap-badge-success {
+      background: #d1fae5;
+      color: #047857;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 4px;
+      white-space: nowrap;
+      margin-top: 2px;
+    }
+
+    /* Diapositiva 2: Cuadrícula POUR */
+    .pour-deck-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .pour-pillar-card {
+      background: #ffffff;
+      border: 1px solid var(--parkia-border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: var(--shadow-sm);
+      transition: all 180ms ease;
+    }
+    .pour-pillar-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--parkia-primary);
+    }
+
+    .pillar-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .pillar-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      font-size: 20px;
+      font-weight: 800;
+      color: #ffffff;
+      user-select: none;
+    }
+    .avatar-p { background: var(--parkia-primary); }
+    .avatar-o { background: #0284c7; }
+    .avatar-u { background: #d97706; }
+    .avatar-r { background: #db2777; }
+
+    .pillar-name {
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--parkia-text-main);
+    }
+    .pillar-meta {
+      font-size: 11.5px;
+      color: var(--parkia-text-muted);
+      font-weight: 600;
+    }
+
+    .pillar-body {
+      font-size: 13.5px;
+      color: var(--parkia-text-muted);
+      line-height: 1.5;
+    }
+
+    .pillar-checklist {
+      list-style: none;
+      margin-top: auto;
+      padding-top: 14px;
+      border-top: 1px dashed var(--parkia-border);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--parkia-text-main);
+    }
+    .pillar-checklist li {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .pillar-checklist li span {
+      color: var(--parkia-teal-600);
+    }
+
+    /* Diapositiva 3: Matriz Exhaustiva de Trazabilidad */
+    .traceability-table-wrapper {
+      overflow-x: auto;
+      border: 1px solid var(--parkia-border);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 24px;
+    }
+
+    .traceability-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #ffffff;
+      text-align: left;
+      font-size: 13.5px;
+    }
+    .traceability-table th {
+      background: var(--parkia-surface-subtle);
+      color: var(--parkia-text-main);
+      padding: 14px 18px;
+      font-size: 12.5px;
+      font-weight: 750;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--parkia-border);
+    }
+    .traceability-table td {
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--parkia-border);
+      vertical-align: top;
+      color: var(--parkia-text-main);
+      line-height: 1.5;
+    }
+    .traceability-table tr:last-child td {
+      border-bottom: none;
+    }
+    .traceability-table tr:hover td {
+      background: #fafafa;
+    }
+
+    .code-tag {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 11.5px;
+      background: #f1f5f9;
+      color: #0f766e;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid #e2e8f0;
+      white-space: nowrap;
+    }
+
+    .badge-principle {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 20px;
+      text-transform: uppercase;
+    }
+    .badge-p { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+    .badge-o { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+    .badge-u { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+    .badge-r { background: #fce7f3; color: #be185d; border: 1px solid #fbcfe8; }
+
+    /* Diapositiva 4: Dual Contextual (Móvil vs Garita) */
+    .dual-architecture-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    .dual-card {
+      background: #ffffff;
+      border: 1.5px solid var(--parkia-border);
+      border-radius: var(--radius-lg);
+      padding: 26px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .dual-card.mobile-theme {
+      border-color: #99f6e4;
+      background: linear-gradient(180deg, #ffffff 0%, #f0fdfa 100%);
+    }
+    .dual-card.desktop-theme {
+      border-color: #bae6fd;
+      background: linear-gradient(180deg, #ffffff 0%, #f0f9ff 100%);
+    }
+
+    .dual-card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .dual-icon-box {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      font-size: 22px;
+      background: #ffffff;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--parkia-border);
+    }
+    .dual-card-title h3 {
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--parkia-text-main);
+    }
+    .dual-card-title span {
+      font-size: 12px;
+      color: var(--parkia-text-muted);
+      font-weight: 600;
+    }
+
+    .dual-features-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-size: 13.5px;
+    }
+    .dual-features-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .dual-features-list li strong {
+      color: var(--parkia-text-main);
+    }
+
+    /* Diapositiva 5: Laboratorio Interactivo Parkia (Sandbox) */
+    .sandbox-container {
+      background: #ffffff;
+      border: 1px solid var(--parkia-border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 24px;
+    }
+
+    .sandbox-controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding-bottom: 20px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--parkia-border);
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .control-group-label {
+      font-size: 12px;
+      font-weight: 750;
+      color: var(--parkia-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .sandbox-btn {
+      background: #ffffff;
+      border: 1px solid var(--parkia-border);
+      color: var(--parkia-text-main);
+      padding: 7px 13px;
+      border-radius: var(--radius-sm);
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 160ms ease;
+    }
+    .sandbox-btn:hover {
+      background: var(--parkia-surface-subtle);
+      border-color: var(--parkia-border-strong);
+    }
+    .sandbox-btn.active {
+      background: var(--parkia-teal-50);
+      border-color: var(--parkia-teal-600);
+      color: var(--parkia-teal-800);
+      font-weight: 750;
+    }
+
+    .sandbox-btn-tts {
+      background: #0284c7;
+      color: #ffffff;
+      border: 1px solid #0369a1;
+      padding: 7px 15px;
+      border-radius: var(--radius-sm);
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 160ms ease;
+    }
+    .sandbox-btn-tts:hover {
+      background: #0369a1;
+    }
+
+    /* Lienzo Interactivo con Bahías Reales y Ticket */
+    .sandbox-board {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+      background: #f8fafc;
+      padding: 20px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--parkia-border);
+      transition: all 200ms ease;
+    }
+
+    .parking-spots-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+    }
+
+    .spot-card {
+      background: #ffffff;
+      border-radius: var(--radius-md);
+      padding: 16px;
+      border: 2px solid var(--state-available-border);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+    }
+    .spot-card.occupied {
+      border-color: var(--state-occupied-border);
+      background: #ffffff;
+    }
+    .spot-card.reserved {
+      border-color: var(--state-reserved-border);
+      background: #ffffff;
+    }
+    .spot-card.maintenance {
+      border-color: var(--state-maintenance-border);
+      background: #ffffff;
+    }
+
+    .spot-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .spot-id {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--parkia-text-main);
+    }
+    .spot-icon-badge {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      display: grid;
+      place-items: center;
+      font-size: 14px;
+      font-weight: 800;
+    }
+    .badge-icon-avail { background: var(--state-available-bg); color: #047857; }
+    .badge-icon-occ { background: var(--state-occupied-bg); color: #b91c1c; }
+    .badge-icon-res { background: var(--state-reserved-bg); color: #b45309; }
+    .badge-icon-maint { background: var(--state-maintenance-bg); color: #4b5563; }
+
+    .spot-status-text {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .text-avail { color: #059669; }
+    .text-occ { color: #dc2626; }
+    .text-res { color: #d97706; }
+    .text-maint { color: #4b5563; }
+
+    .spot-meta-detail {
+      font-size: 12.5px;
+      color: var(--parkia-text-muted);
+      line-height: 1.4;
+    }
+
+    /* Simulación de Ticket Digital Parkia */
+    .digital-ticket-preview {
+      background: #ffffff;
+      border: 1px dashed #cbd5e1;
+      border-radius: var(--radius-md);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: var(--shadow-sm);
+    }
+    .ticket-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px dashed #e2e8f0;
+      padding-bottom: 10px;
+    }
+    .ticket-title {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: var(--parkia-text-main);
+    }
+    .ticket-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12.5px;
+    }
+    .ticket-row span:first-child {
+      color: var(--parkia-text-muted);
+    }
+    .ticket-row span:last-child {
+      font-weight: 700;
+      color: var(--parkia-text-main);
+    }
+    .ticket-total {
+      margin-top: 6px;
+      padding-top: 10px;
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--parkia-primary);
+    }
+
+    /* Barra de Navegación Inferior (Footer Deck) */
+    .deck-footer-bar {
+      margin-top: 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      border-top: 1px solid var(--parkia-border);
+      padding-top: 22px;
+    }
+
+    .btn-nav-step {
+      background: #ffffff;
+      border: 1px solid var(--parkia-border);
+      color: var(--parkia-text-main);
+      padding: 10px 22px;
+      border-radius: var(--radius-sm);
+      font-size: 13.5px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 160ms ease;
+    }
+    .btn-nav-step:hover:not(:disabled) {
+      background: var(--parkia-teal-50);
+      border-color: var(--parkia-teal-600);
+      color: var(--parkia-teal-800);
+    }
+    .btn-nav-step:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn-nav-step.primary {
+      background: var(--parkia-primary);
+      color: #ffffff;
+      border-color: var(--parkia-primary);
+    }
+    .btn-nav-step.primary:hover:not(:disabled) {
+      background: var(--parkia-primary-hover);
+    }
+
+    .progress-track-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+      max-width: 380px;
+      justify-content: center;
+    }
+    .progress-bar-rail {
+      flex: 1;
+      height: 6px;
+      background: #e2e8f0;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--parkia-primary);
+      width: 20%;
+      border-radius: 10px;
+      transition: width 240ms ease;
+    }
+    .slide-step-counter {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--parkia-text-muted);
+      white-space: nowrap;
+    }
+
+    /* Clases de Filtros SVG para Simulación de Daltonismo */
+    .filter-protanopia { filter: url('#proto-sim') !important; }
+    .filter-deuteranopia { filter: url('#deuter-sim') !important; }
+    .filter-tritanopia { filter: url('#tritan-sim') !important; }
+    .filter-monochrome { filter: grayscale(100%) !important; }
+    .filter-high-contrast {
+      background: #000000 !important;
+      color: #facc15 !important;
+      border: 3px solid #facc15 !important;
+    }
+    .filter-high-contrast * {
+      background: #000000 !important;
+      color: #facc15 !important;
+      border-color: #facc15 !important;
+    }
+    .font-dyslexic {
+      font-family: 'OpenDyslexic', 'Comic Sans MS', sans-serif !important;
+      letter-spacing: 0.8px !important;
+      word-spacing: 2px !important;
+    }
+
+    /* Responsive */
+    @media (max-width: 860px) {
+      .parkia-topbar {
+        padding: 12px 18px;
+      }
+      .slide-viewport {
+        padding: 24px 20px;
+      }
+      .sandbox-board {
+        grid-template-columns: 1fr;
+      }
+      .slide-title {
+        font-size: 21px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Salto Accesible -->
+  <a href="#main-deck-content" class="skip-link">Saltar directamente a las diapositivas de la presentación</a>
+
+  <!-- Barra Superior Oficial Parkia -->
+  <header class="parkia-topbar" role="banner">
+    <div class="brand-section">
+      <div class="brand-badge" aria-hidden="true">P</div>
+      <div class="brand-info">
+        <h1>
+          Parkia
+          <span class="tag-wcag-badge">
+            <span class="pulsing-dot" aria-hidden="true"></span>
+            WCAG 2.1 AA/AAA
+          </span>
+        </h1>
+        <p>Sistema Digital de Parqueaderos · Presentación de Accesibilidad Universal</p>
+      </div>
+    </div>
+
+    <!-- Enlace Directo Oficial a GitHub Pages -->
+    <div class="topbar-actions">
+      <a href="https://kleinsuarez.github.io/parkia/" target="_blank" rel="noopener noreferrer" class="btn-pages-live" title="Abrir aplicación Parkia desplegada en GitHub Pages">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        <span>Probar Parkia en Vivo (Pages)</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- Matrices SVG de Daltonismo Calibradas (GPU) -->
+  <svg style="display:none;" aria-hidden="true">
+    <filter id="proto-sim">
+      <feColorMatrix values="0.567, 0.433, 0, 0, 0  0.558, 0.442, 0, 0, 0  0, 0.242, 0.758, 0, 0  0, 0, 0, 1, 0" />
+    </filter>
+    <filter id="deuter-sim">
+      <feColorMatrix values="0.625, 0.375, 0, 0, 0  0.7, 0.3, 0, 0, 0  0, 0.3, 0.7, 0, 0  0, 0, 0, 1, 0" />
+    </filter>
+    <filter id="tritan-sim">
+      <feColorMatrix values="0.95, 0.05, 0, 0, 0  0, 0.433, 0.567, 0, 0  0, 0.475, 0.525, 0, 0  0, 0, 0, 1, 0" />
+    </filter>
+  </svg>
+
+  <!-- Contenedor Principal de la Presentación -->
+  <main id="main-deck-content" tabindex="-1">
+
+    <!-- Navegación por Diapositivas (Segmented Tabs Estilo Parkia) -->
+    <div class="deck-nav-wrapper">
+      <nav class="slide-tabs" aria-label="Selector de Diapositiva">
+        <button type="button" class="tab-btn active" onclick="setSlide(0)">
+          <span>1.</span> Diagnóstico & Caso Real
+        </button>
+        <button type="button" class="tab-btn" onclick="setSlide(1)">
+          <span>2.</span> Principios W3C POUR
+        </button>
+        <button type="button" class="tab-btn" onclick="setSlide(2)">
+          <span>3.</span> Matriz de Trazabilidad
+        </button>
+        <button type="button" class="tab-btn" onclick="setSlide(3)">
+          <span>4.</span> Arquitectura Dual (Móvil & Garita)
+        </button>
+        <button type="button" class="tab-btn" onclick="setSlide(4)">
+          <span>5.</span> Laboratorio Interactivo
+        </button>
+      </nav>
+
+      <div class="deck-status-pill">
+        <span>Atajos: [←] [→] o [1-5]</span>
+      </div>
+    </div>
+
+    <!-- Visor de Diapositivas -->
+    <div class="slide-viewport">
+
+      <!-- ==============================================================
+           DIAPOSITIVA 1: DIAGNÓSTICO Y CASO REAL
+           ============================================================== -->
+      <section class="slide-card active" id="slide-0" aria-labelledby="slide-0-heading">
+        <div class="slide-header">
+          <div>
+            <span class="slide-eyebrow">Diapositiva 1 de 5 · Caso de Estudio & Punto de Partida</span>
+            <h2 id="slide-0-heading" class="slide-title">Diagnóstico de Accesibilidad y la Queja del Usuario</h2>
+            <p class="slide-subtitle">Cómo el feedback de una prueba con usuarios reales detonó la reconstrucción semántica y universal de Parkia.</p>
+          </div>
+        </div>
+
+        <div class="problem-solution-grid">
+          <!-- Columna: Problema Real -->
+          <div class="feedback-card">
+            <h3 class="feedback-card-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              El Hallazgo Reportado por el Usuario
+            </h3>
+
+            <div class="user-quote-box">
+              "Una persona probó y dijo que algunos botones no tenían la etiqueta correcta y no sabía qué acción hacía..."
+            </div>
+
+            <ul class="gap-items-list">
+              <li>
+                <span class="gap-badge-danger">BARRERA 1</span>
+                <span><strong>Botones Mudos e Indescifrables:</strong> Existían elementos <code>&lt;button&gt;</code> y <code>&lt;div&gt;</code> sin texto accesible o con solo un icono visual, impidiendo a usuarios de lectores de pantalla saber qué disparaban.</span>
+              </li>
+              <li>
+                <span class="gap-badge-danger">BARRERA 2</span>
+                <span><strong>Trampas de Teclado y Foco Invisible:</strong> Operadores que no usan ratón no podían saltar menús laterales ni percibir qué elemento estaba enfocado.</span>
+              </li>
+              <li>
+                <span class="gap-badge-danger">BARRERA 3</span>
+                <span><strong>Invisibilidad para Daltónicos:</strong> Los puestos de patio dependían únicamente de luces rojas y verdes para indicar ocupación.</span>
+              </li>
+              <li>
+                <span class="gap-badge-danger">BARRERA 4</span>
+                <span><strong>Desincronización en Eventos Críticos:</strong> El temporizador de la talanquera bajaba sin emitir anuncios sonoros asistidos (<code>aria-live</code>).</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Columna: Solución Implementada -->
+          <div class="solution-card">
+            <h3 class="solution-card-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              La Solución de Diseño & Desarrollo Parkia
+            </h3>
+
+            <p style="font-size: 13.5px; color: #065f46; margin-bottom: 14px;">
+              Diseñamos una transformación integral bajo el estándar internacional <strong>W3C WCAG 2.1 Niveles AA y AAA</strong>:
+            </p>
+
+            <ul class="gap-items-list">
+              <li>
+                <span class="gap-badge-success">SOLUCIÓN 1</span>
+                <span><strong>Etiquetado Predictivo Universal:</strong> Cada control responde exactamente: <em>¿Qué vehículo?, ¿Qué celda?, ¿Qué importe?, ¿Qué acción ocurrirá?</em>.</span>
+              </li>
+              <li>
+                <span class="gap-badge-success">SOLUCIÓN 2</span>
+                <span><strong>Navegación 100% por Teclado:</strong> Enlace <code>Skip to Content</code>, atajo global <code>Alt + A</code> y focos visibles de 3px con contraste > 7:1.</span>
+              </li>
+              <li>
+                <span class="gap-badge-success">SOLUCIÓN 3</span>
+                <span><strong>Codificación Multimodal:</strong> Color + Icono distintivo + Texto semántico claro para todas las bahías y tarifas.</span>
+              </li>
+              <li>
+                <span class="gap-badge-success">SOLUCIÓN 4</span>
+                <span><strong>Lector TTS y 7 Matrices GPU:</strong> Síntesis de voz en español nativa del navegador y filtros de daltonismo sin latencia.</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div style="background: var(--parkia-surface-subtle); border: 1px solid var(--parkia-border); border-radius: var(--radius-md); padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <span style="font-size: 13px; color: var(--parkia-text-muted);">
+            🎯 <strong>Resultado:</strong> Parkia garantiza autonomía e igualdad operativa para usuarios con baja visión, ceguera, daltonismo, movilidad reducida o dislexia.
+          </span>
+          <a href="https://kleinsuarez.github.io/parkia/" target="_blank" rel="noopener noreferrer" class="live-url-code">
+            Abrir App en GitHub Pages ↗
+          </a>
+        </div>
+      </section>
+
+      <!-- ==============================================================
+           DIAPOSITIVA 2: LOS 4 PRINCIPIOS W3C POUR
+           ============================================================== -->
+      <section class="slide-card" id="slide-1" aria-labelledby="slide-1-heading">
+        <div class="slide-header">
+          <div>
+            <span class="slide-eyebrow">Diapositiva 2 de 5 · Marco Normativo Internacional</span>
+            <h2 id="slide-1-heading" class="slide-title">Los 4 Principios Fundamentales W3C (POUR)</h2>
+            <p class="slide-subtitle">Cómo se aplican Perceptible, Operable, Comprensible y Robusto en cada flujo de parqueadero inteligente.</p>
+          </div>
+        </div>
+
+        <div class="pour-deck-grid">
+          <!-- 1. PERCEPTIBLE -->
+          <div class="pour-pillar-card">
+            <div class="pillar-header">
+              <div class="pillar-avatar avatar-p">P</div>
+              <div>
+                <h3 class="pillar-name">Perceptible</h3>
+                <span class="pillar-meta">Principio 1 · Sentidos Disponibles</span>
+              </div>
+            </div>
+            <p class="pillar-body">
+              La información y los componentes de la interfaz no pueden depender de un solo sentido (como solo la vista o solo el color).
+            </p>
+            <ul class="pillar-checklist">
+              <li><span>✓</span> Triple codificación en bahías (color, icono y texto).</li>
+              <li><span>✓</span> Ratios de contraste WCAG AAA (> 7:1 en elementos clave).</li>
+              <li><span>✓</span> 7 matrices de daltonismo aceleradas por hardware.</li>
+              <li><span>✓</span> Escalado de texto dinámico de 90% a 150%.</li>
+            </ul>
+          </div>
+
+          <!-- 2. OPERABLE -->
+          <div class="pour-pillar-card">
+            <div class="pillar-header">
+              <div class="pillar-avatar avatar-o">O</div>
+              <div>
+                <h3 class="pillar-name">Operable</h3>
+                <span class="pillar-meta">Principio 2 · Navegación Universal</span>
+              </div>
+            </div>
+            <p class="pillar-body">
+              Todos los controles deben poder ejecutarse sin necesidad de ratón, mediante teclado, switches adaptativos o comandos de voz.
+            </p>
+            <ul class="pillar-checklist">
+              <li><span>✓</span> Enlace directo <code>Skip to main content</code>.</li>
+              <li><span>✓</span> 100% interactividad con teclas <code>Tab</code>, <code>Enter</code> y <code>Space</code>.</li>
+              <li><span>✓</span> Atajo universal rápido <kbd style="background:#e2e8f0; padding:1px 5px; border-radius:4px; font-size:11px;">Alt + A</kbd>.</li>
+              <li><span>✓</span> Cierre instantáneo de modales con tecla <code>Escape</code>.</li>
+            </ul>
+          </div>
+
+          <!-- 3. COMPRENSIBLE -->
+          <div class="pour-pillar-card">
+            <div class="pillar-header">
+              <div class="pillar-avatar avatar-u">U</div>
+              <div>
+                <h3 class="pillar-name">Comprensible</h3>
+                <span class="pillar-meta">Principio 3 · Previsibilidad y Claridad</span>
+              </div>
+            </div>
+            <p class="pillar-body">
+              La información y el manejo de los flujos debe ser intuitiva, predecible y con retroalimentación explícita de cada acción.
+            </p>
+            <ul class="pillar-checklist">
+              <li><span>✓</span> Botones con <code>aria-label</code> contextual completo.</li>
+              <li><span>✓</span> Mensajes de confirmación y prevención de errores POS.</li>
+              <li><span>✓</span> Modo tipográfico para dislexia con interlineado amplio.</li>
+              <li><span>✓</span> Lector de voz asistido (TTS) en español neutro.</li>
+            </ul>
+          </div>
+
+          <!-- 4. ROBUSTO -->
+          <div class="pour-pillar-card">
+            <div class="pillar-header">
+              <div class="pillar-avatar avatar-r">R</div>
+              <div>
+                <h3 class="pillar-name">Robusto</h3>
+                <span class="pillar-meta">Principio 4 · Compatibilidad Tecnológica</span>
+              </div>
+            </div>
+            <p class="pillar-body">
+              El código debe ser interpretado con total fidelidad por cualquier navegador y software lector de pantalla presente y futuro.
+            </p>
+            <ul class="pillar-checklist">
+              <li><span>✓</span> Estructura HTML5 semántica pura (<code>&lt;header&gt;</code>, <code>&lt;main&gt;</code>, etc.).</li>
+              <li><span>✓</span> Regiones vivas <code>aria-live="polite"</code> para talanqueras.</li>
+              <li><span>✓</span> Roles WAI-ARIA estrictos (<code>status</code>, <code>dialog</code>).</li>
+              <li><span>✓</span> Validación automatizada con Playwright E2E.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div style="background: var(--parkia-teal-50); border: 1px solid var(--parkia-teal-200); border-radius: var(--radius-md); padding: 14px 20px; display: flex; align-items: center; justify-content: space-between;">
+          <span style="font-size: 13px; color: var(--parkia-teal-900);">
+            💡 <strong>Cumplimiento Normativo:</strong> Este marco garantiza conformidad con la <em>Ley de Accesibilidad Web</em> y pautas internacionales W3C.
+          </span>
+          <span style="font-size: 12px; font-weight: 700; color: var(--parkia-teal-700);">W3C WCAG 2.1 Nivel AA/AAA</span>
+        </div>
+      </section>
+
+      <!-- ==============================================================
+           DIAPOSITIVA 3: MATRIZ DE TRAZABILIDAD
+           ============================================================== -->
+      <section class="slide-card" id="slide-2" aria-labelledby="slide-2-heading">
+        <div class="slide-header">
+          <div>
+            <span class="slide-eyebrow">Diapositiva 3 de 5 · ¿Dónde se Aplicó y Para Qué?</span>
+            <h2 id="slide-2-heading" class="slide-title">Matriz Exhaustiva de Trazabilidad en el Código</h2>
+            <p class="slide-subtitle">Mapeo detallado de componentes, fragmentos de código aplicados y la barrera de usuario específica que eliminan.</p>
+          </div>
+        </div>
+
+        <div class="traceability-table-wrapper">
+          <table class="traceability-table">
+            <thead>
+              <tr>
+                <th style="width: 14%;">Principio</th>
+                <th style="width: 28%;">Dónde se Aplicó en Parkia</th>
+                <th style="width: 32%;">¿Para qué sirve? (Barrera que Derriba)</th>
+                <th style="width: 26%;">Implementación Técnica</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="badge-principle badge-o">OPERABLE</span></td>
+                <td>
+                  <strong>Bahías de Patio y Celdas</strong><br>
+                  <span class="code-tag">src/components/YardControl.tsx</span>
+                </td>
+                <td>
+                  <strong>Ceguera y Navegación sin Ratón:</strong> Antes eran <code>divs</code> inalcanzables. Ahora el operador puede auditar estados y reservar celdas usando solo la tecla <code>Tab</code> y <code>Enter</code>.
+                </td>
+                <td>
+                  <code>&lt;button type="button" aria-label="Bahía A-01: Estado Disponible, Automóvil"&gt;</code>
+                </td>
+              </tr>
+              <tr>
+                <td><span class="badge-principle badge-u">COMPRENSIBLE</span></td>
+                <td>
+                  <strong>Filas de Cobro en Caja POS</strong><br>
+                  <span class="code-tag">src/components/CashierDesk.tsx</span>
+                </td>
+                <td>
+                  <strong>Resuelve la Queja del Usuario:</strong> La persona no sabía qué acción hacía el botón. Ahora cada fila especifica la placa, hora de ingreso y monto exacto a cobrar antes de hacer clic.
+                </td>
+                <td>
+                  <code>aria-label="Cobrar vehículo placa JHT-482, tiempo 1h 45m, total $7,200 COP"</code>
+                </td>
+              </tr>
+              <tr>
+                <td><span class="badge-principle badge-r">ROBUSTO</span></td>
+                <td>
+                  <strong>Temporizador de Talanquera</strong><br>
+                  <span class="code-tag">GateItemCard en App.tsx</span>
+                </td>
+                <td>
+                  <strong>Peligro Físico / Baja Visión:</strong> Avisa por voz o lector cuando la barrera de acceso está abierta y anuncia cuántos segundos restan antes de que baje automáticamente.
+                </td>
+                <td>
+                  <code>aria-live="polite" role="status" ("Barrera Norte abierta, cerrando en 3s")</code>
+                </td>
+              </tr>
+              <tr>
+                <td><span class="badge-principle badge-o">OPERABLE</span></td>
+                <td>
+                  <strong>Enlace Skip Link & Landmarks</strong><br>
+                  <span class="code-tag">projects/src/App.tsx</span>
+                </td>
+                <td>
+                  <strong>Fatiga Motora:</strong> Evita tener que tabular 10 botones del menú lateral cada vez que se cambia de pantalla, saltando directo a <code>#main-content</code>.
+                </td>
+                <td>
+                  <code>&lt;a href="#main-content" class="skip-link"&gt;Saltar al contenido&lt;/a&gt;</code>
+                </td>
+              </tr>
+              <tr>
+                <td><span class="badge-principle badge-p">PERCEPTIBLE</span></td>
+                <td>
+                  <strong>Filtros SVG de Daltonismo</strong><br>
+                  <span class="code-tag">AccessibilityWidget.tsx</span>
+                </td>
+                <td>
+                  <strong>Deficiencia Cromática:</strong> Personas con protanopía, deuteranopía o tritanopía diferencian claramente bahías ocupadas y libres gracias a matrices matemáticas <code>feColorMatrix</code>.
+                </td>
+                <td>
+                  Filtros GPU SVG inyectados en CSS con <code>filter: url('#proto-sim')</code>
+                </td>
+              </tr>
+              <tr>
+                <td><span class="badge-principle badge-u">COMPRENSIBLE</span></td>
+                <td>
+                  <strong>Formularios y Modales Financieros</strong><br>
+                  <span class="code-tag">PaymentModal.tsx</span>
+                </td>
+                <td>
+                  <strong>Desorientación y Errores de Pago:</strong> Labels vinculados rígidamente con <code>htmlFor</code>, foco atrapado en el modal y cierre con <code>Escape</code>.
+                </td>
+                <td>
+                  <code>&lt;label htmlFor="cash-amount"&gt;</code> + <code>aria-required="true"</code>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div style="background: #ffffff; border: 1px solid var(--parkia-border); border-radius: var(--radius-md); padding: 12px 18px; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
+          <span>📦 <strong>Código Verificado:</strong> Todos los componentes cuentan con suite de validación Playwright automatizada bajo WCAG 2.1 AA/AAA.</span>
+          <span style="font-weight: 700; color: var(--parkia-primary);">100% Cobertura Semántica</span>
+        </div>
+      </section>
+
+      <!-- ==============================================================
+           DIAPOSITIVA 4: ARQUITECTURA DUAL CONTEXTUAL
+           ============================================================== -->
+      <section class="slide-card" id="slide-3" aria-labelledby="slide-3-heading">
+        <div class="slide-header">
+          <div>
+            <span class="slide-eyebrow">Diapositiva 4 de 5 · Ergonomía y Contexto de Uso</span>
+            <h2 id="slide-3-heading" class="slide-title">Arquitectura Dual: Móvil Conductor vs Garita Operario</h2>
+            <p class="slide-subtitle">Diseño contextual adaptado: navegación con pulgar en smartphones y controles de alta visibilidad para operadores en cabina.</p>
+          </div>
+        </div>
+
+        <div class="dual-architecture-grid">
+          <!-- Tarjeta Móvil -->
+          <div class="dual-card mobile-theme">
+            <div class="dual-card-header">
+              <div class="dual-icon-box" aria-hidden="true">📱</div>
+              <div class="dual-card-title">
+                <h3>App Móvil (Conductores)</h3>
+                <span>Experiencia Táctil Dentro del Smartphone</span>
+              </div>
+            </div>
+
+            <p style="font-size: 13.5px; color: var(--parkia-text-muted); line-height: 1.5;">
+              La accesibilidad vive <strong>estrictamente contenida dentro del marco del teléfono</strong> (<code>.phone-device</code>), eliminando cualquier desborde fuera de la pantalla.
+            </p>
+
+            <ul class="dual-features-list">
+              <li>
+                <span>✓</span>
+                <div>
+                  <strong>FAB Flotante Interno:</strong> Botón <code>♿</code> posicionado a <code>bottom: 82px; right: 18px;</code>, sobre la barra de navegación del móvil, al alcance ergonómico del pulgar.
+                </div>
+              </li>
+              <li>
+                <span>✓</span>
+                <div>
+                  <strong>Bottom Sheet Táctil Nativa:</strong> Despliega un panel deslizable desde abajo (<code>.a11y-mobile-sheet</code>) con scroll interno y arrastre suave.
+                </div>
+              </li>
+              <li>
+                <span>✓</span>
+                <div>
+                  <strong>Píldora Rápida en Header:</strong> Botón accesible en la barra superior móvil junto a las notificaciones para activar el lector al instante.
+                </div>
+              </li>
+              <li>
+                <span>✓</span>
+                <div>
+                  <strong>Cero Polución Visual:</strong> Nada queda flotando en el fondo del navegador de escritorio cuando se visualiza el emulador móvil.
+                </div>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Tarjeta Operario -->
+          <div class="dual-card desktop-theme">
+            <div class="dual-card-header">
+              <div class="dual-icon-box" aria-hidden="true">🖥️</div>
+              <div class="dual-card-title">
+                <h3>Consola de Garita (Operarios)</h3>
+                <span>Panel de Control de Escritorio y Terminal POS</span>
+              </div>
+            </div>
+
+            <p style="font-size: 13.5px; color: var(--parkia-text-muted); line-height: 1.5;">
+              Diseñado para operarios de parqueadero en condiciones exigentes de iluminación y rapidez de cobro en terminales de garita.
+            </p>
+
+            <ul class="dual-features-list">
+              <li>
+                <span>✓</span>
+                <div>
+                  <strong>Integración en Sidebar:</strong> Botón permanente en la parte inferior del menú lateral (<code>.sidebar-bottom</code>) con etiqueta e icono claros.
+                </div>
+              </li>
+              <li>
+                <span>✓</span>
+                <div>
+                  <strong>Atajo Global de Garita (<kbd style="background:#e2e8f0; padding:1px 5px; border-radius:4px; font-size:11px;">Alt + A</kbd>):</strong> Abre la paleta de accesibilidad sin tocar el ratón durante una fila de vehículos.
+                </div>
+              </li>
+              <li>
+                <span>✓</span>
+                <div>
+                  <strong>Modal de Escritorio Centrado:</strong> Diálogo accesible con captura de foco estricta (<code>focus trap</code>) y fondo oscurecido para no perder el contexto.
+                </div>
+              </li>
+              <li>
+                <span>✓</span>
+                <div>
+                  <strong>Sincronización Reactiva:</strong> Las preferencias se guardan en <code>localStorage</code> y se propagan inmediatamente a toda la sesión.
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div style="background: #ffffff; border: 1px solid var(--parkia-border); border-radius: var(--radius-md); padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <span style="font-size: 13px; color: var(--parkia-text-muted);">
+            🔄 <strong>Hook Unificado:</strong> <code>useA11yState.ts</code> sincroniza en tiempo real ambas interfaces ante cualquier cambio del usuario.
+          </span>
+          <span style="font-size: 12px; font-weight: 700; color: var(--parkia-primary);">Latencia de Cambio: &lt; 5ms</span>
+        </div>
+      </section>
+
+      <!-- ==============================================================
+           DIAPOSITIVA 5: LABORATORIO INTERACTIVO (SANDBOX)
+           ============================================================== -->
+      <section class="slide-card" id="slide-4" aria-labelledby="slide-4-heading">
+        <div class="slide-header">
+          <div>
+            <span class="slide-eyebrow">Diapositiva 5 de 5 · Experimentación en Tiempo Real</span>
+            <h2 id="slide-4-heading" class="slide-title">Laboratorio Interactivo de Accesibilidad Parkia</h2>
+            <p class="slide-subtitle">Prueba en vivo los filtros de daltonismo, el escalado dinámico de texto y la síntesis de voz en esta réplica de interfaz Parkia.</p>
+          </div>
+        </div>
+
+        <!-- Contenedor del Sandbox -->
+        <div class="sandbox-container">
+          
+          <!-- Fila de Controles Asistivos -->
+          <div class="sandbox-controls-row">
+            <!-- Selector de Daltonismo -->
+            <div class="control-group">
+              <span class="control-group-label">🎨 Daltonismo:</span>
+              <button type="button" class="sandbox-btn active" id="btn-filt-none" onclick="setLabFilter('none')">Estándar</button>
+              <button type="button" class="sandbox-btn" id="btn-filt-proto" onclick="setLabFilter('protanopia')">Protanopía (Rojo)</button>
+              <button type="button" class="sandbox-btn" id="btn-filt-deuter" onclick="setLabFilter('deuteranopia')">Deuteranopía (Verde)</button>
+              <button type="button" class="sandbox-btn" id="btn-filt-tritan" onclick="setLabFilter('tritanopia')">Tritanopía (Azul)</button>
+              <button type="button" class="sandbox-btn" id="btn-filt-mono" onclick="setLabFilter('monochrome')">Monocromo</button>
+              <button type="button" class="sandbox-btn" id="btn-filt-contrast" onclick="setLabFilter('contrast')">Alto Contraste AAA</button>
+            </div>
+
+            <!-- Controles de Texto y Voz -->
+            <div class="control-group">
+              <span class="control-group-label">🔍 Zoom:</span>
+              <button type="button" class="sandbox-btn" onclick="adjustLabZoom(-0.1)">A-</button>
+              <button type="button" class="sandbox-btn" onclick="adjustLabZoom(0.1)">A+</button>
+              
+              <button type="button" class="sandbox-btn" id="btn-dyslexia" onclick="toggleDyslexia()">
+                Tipografía Dislexia
+              </button>
+
+              <button type="button" class="sandbox-btn-tts" onclick="speakLabText('all')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                <span>🔊 Leer Interfaz (TTS)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Tablero de Demostración Parkia -->
+          <div class="sandbox-board" id="sandbox-board-element">
+            
+            <!-- Bahías de Estacionamiento -->
+            <div class="parking-spots-grid">
+              
+              <!-- Bahía A-01: Disponible -->
+              <div class="spot-card">
+                <div class="spot-card-header">
+                  <span class="spot-id">Bahía A-01</span>
+                  <div class="spot-icon-badge badge-icon-avail" aria-hidden="true">✓</div>
+                </div>
+                <div class="spot-status-text text-avail">Disponible</div>
+                <div class="spot-meta-detail">
+                  Vehículo: Automóvil<br>
+                  Tarifa: $3,500 COP / hora
+                </div>
+                <button type="button" class="sandbox-btn" style="margin-top:auto;" onclick="speakLabText('A01')">
+                  🔊 Leer esta bahía
+                </button>
+              </div>
+
+              <!-- Bahía A-02: Ocupada -->
+              <div class="spot-card occupied">
+                <div class="spot-card-header">
+                  <span class="spot-id">Bahía A-02</span>
+                  <div class="spot-icon-badge badge-icon-occ" aria-hidden="true">🚗</div>
+                </div>
+                <div class="spot-status-text text-occ">Ocupado</div>
+                <div class="spot-meta-detail">
+                  Placa: <strong>KLO-912</strong><br>
+                  Tiempo: 1h 42m ($6,300)
+                </div>
+                <button type="button" class="sandbox-btn" style="margin-top:auto;" onclick="speakLabText('A02')">
+                  🔊 Leer esta bahía
+                </button>
+              </div>
+
+              <!-- Bahía A-03: Reservada -->
+              <div class="spot-card reserved">
+                <div class="spot-card-header">
+                  <span class="spot-id">Bahía A-03</span>
+                  <div class="spot-icon-badge badge-icon-res" aria-hidden="true">⏱️</div>
+                </div>
+                <div class="spot-status-text text-res">Reservado</div>
+                <div class="spot-meta-detail">
+                  Cliente: App Móvil<br>
+                  Llegada est.: 12 minutos
+                </div>
+                <button type="button" class="sandbox-btn" style="margin-top:auto;" onclick="speakLabText('A03')">
+                  🔊 Leer esta bahía
+                </button>
+              </div>
+
+              <!-- Bahía A-04: Mantenimiento -->
+              <div class="spot-card maintenance">
+                <div class="spot-card-header">
+                  <span class="spot-id">Bahía A-04</span>
+                  <div class="spot-icon-badge badge-icon-maint" aria-hidden="true">🔧</div>
+                </div>
+                <div class="spot-status-text text-maint">Mantenimiento</div>
+                <div class="spot-meta-detail">
+                  Sensor IoT en calibración<br>
+                  No disponible para cobro
+                </div>
+                <button type="button" class="sandbox-btn" style="margin-top:auto;" onclick="speakLabText('A04')">
+                  🔊 Leer esta bahía
+                </button>
+              </div>
+
+            </div>
+
+            <!-- Vista Previa de Ticket Digital -->
+            <div class="digital-ticket-preview">
+              <div class="ticket-header">
+                <div class="brand-badge" style="width:26px; height:26px; font-size:14px;">P</div>
+                <div>
+                  <div class="ticket-title">Ticket de Parqueadero</div>
+                  <div style="font-size:11px; color:var(--parkia-text-muted);">Parkia Smart System</div>
+                </div>
+              </div>
+
+              <div class="ticket-row">
+                <span>Placa:</span>
+                <span>KLO-912</span>
+              </div>
+              <div class="ticket-row">
+                <span>Ingreso:</span>
+                <span>10:45 AM</span>
+              </div>
+              <div class="ticket-row">
+                <span>Bahía:</span>
+                <span>A-02 (Planta 1)</span>
+              </div>
+              <div class="ticket-row">
+                <span>Tiempo estancia:</span>
+                <span>1 hora 42 mins</span>
+              </div>
+
+              <div class="ticket-total">
+                <span>Total a Cobrar:</span>
+                <span>$6,300 COP</span>
+              </div>
+
+              <button type="button" class="sandbox-btn-tts" style="margin-top:4px;" onclick="speakLabText('ticket')">
+                🔊 Escuchar Liquidación
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Botones de Enlace Finales -->
+        <div style="background: var(--parkia-surface-subtle); border: 1px solid var(--parkia-border); border-radius: var(--radius-md); padding: 18px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+          <div>
+            <h4 style="font-size: 14px; font-weight: 800; color: var(--parkia-text-main); margin-bottom: 2px;">
+              ¿Listo para probar todos los flujos reales de Parkia?
+            </h4>
+            <p style="font-size: 12.5px; color: var(--parkia-text-muted); margin: 0;">
+              Ingresa al despliegue activo en GitHub Pages para interactuar con la app móvil y la consola de garita completas.
+            </p>
+          </div>
+
+          <div>
+            <a href="https://kleinsuarez.github.io/parkia/" target="_blank" rel="noopener noreferrer" class="btn-pages-live" style="font-size: 14px; padding: 11px 24px;">
+              🚀 Probar Parkia en Vivo (GitHub Pages)
+            </a>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Navegación Inferior (Footer Deck) -->
+    <div class="deck-footer-bar">
+      <button type="button" class="btn-nav-step" id="btn-prev" onclick="changeSlide(-1)" disabled>
+        ← Diapositiva Anterior
+      </button>
+
+      <div class="progress-track-wrapper">
+        <div class="progress-bar-rail" role="progressbar" aria-valuemin="1" aria-valuemax="5" aria-valuenow="1" id="deck-progress-bar">
+          <div class="progress-bar-fill" id="deck-progress-fill"></div>
+        </div>
+        <div class="slide-step-counter" id="slide-step-label">
+          Diapositiva 1 de 5
+        </div>
+      </div>
+
+      <button type="button" class="btn-nav-step primary" id="btn-next" onclick="changeSlide(1)">
+        Siguiente Diapositiva →
+      </button>
+    </div>
+
+  </main>
+
+  <!-- Script de Interactividad, Accesibilidad y Navegación -->
+  <script>
+    let currentSlide = 0;
+    const totalSlides = 5;
+    let currentZoom = 1.0;
+    let isDyslexic = false;
+
+    // Control de Diapositivas
+    function setSlide(index) {
+      if (index < 0 || index >= totalSlides) return;
+      currentSlide = index;
+
+      // Actualizar diapositivas
+      document.querySelectorAll('.slide-card').forEach((slide, i) => {
+        slide.classList.toggle('active', i === currentSlide);
+      });
+
+      // Actualizar pestañas
+      document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+        btn.classList.toggle('active', i === currentSlide);
+      });
+
+      // Actualizar botones de navegación
+      document.getElementById('btn-prev').disabled = (currentSlide === 0);
+      document.getElementById('btn-next').disabled = (currentSlide === totalSlides - 1);
+
+      // Actualizar progreso
+      const progressPercent = ((currentSlide + 1) / totalSlides) * 100;
+      document.getElementById('deck-progress-fill').style.width = `${progressPercent}%`;
+      document.getElementById('deck-progress-bar').setAttribute('aria-valuenow', currentSlide + 1);
+      document.getElementById('slide-step-label').textContent = `Diapositiva ${currentSlide + 1} de ${totalSlides}`;
+
+      // Anuncio accesible para lectores de pantalla
+      const currentTitle = document.querySelector('.slide-card.active .slide-title')?.textContent;
+      announceScreenReader(`Diapositiva ${currentSlide + 1} de ${totalSlides}: ${currentTitle}`);
+    }
+
+    function changeSlide(offset) {
+      setSlide(currentSlide + offset);
+    }
+
+    // Navegación por Teclado
+    window.addEventListener('keydown', (e) => {
+      // Ignorar si el usuario está en un campo de texto
+      if (['input', 'textarea', 'select'].includes(e.target.tagName.toLowerCase())) return;
+
+      if (e.key === 'ArrowRight' || e.key === 'PageDown') {
+        if (currentSlide < totalSlides - 1) changeSlide(1);
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        if (currentSlide > 0) changeSlide(-1);
+      } else if (e.key >= '1' && e.key <= '5') {
+        setSlide(parseInt(e.key) - 1);
+      } else if (e.key === 'Home') {
+        setSlide(0);
+      } else if (e.key === 'End') {
+        setSlide(totalSlides - 1);
+      }
+    });
+
+    // Simulador del Laboratorio: Filtros de Daltonismo
+    function setLabFilter(type) {
+      const board = document.getElementById('sandbox-board-element');
+      board.classList.remove('filter-protanopia', 'filter-deuteranopia', 'filter-tritanopia', 'filter-monochrome', 'filter-high-contrast');
+
+      // Actualizar estado activo en botones
+      const btnMap = {
+        'none': 'btn-filt-none',
+        'protanopia': 'btn-filt-proto',
+        'deuteranopia': 'btn-filt-deuter',
+        'tritanopia': 'btn-filt-tritan',
+        'monochrome': 'btn-filt-mono',
+        'contrast': 'btn-filt-contrast'
+      };
+
+      Object.values(btnMap).forEach(id => {
+        const b = document.getElementById(id);
+        if (b) b.classList.remove('active');
+      });
+
+      if (btnMap[type]) {
+        document.getElementById(btnMap[type])?.classList.add('active');
+      }
+
+      if (type === 'protanopia') board.classList.add('filter-protanopia');
+      if (type === 'deuteranopia') board.classList.add('filter-deuteranopia');
+      if (type === 'tritanopia') board.classList.add('filter-tritanopia');
+      if (type === 'monochrome') board.classList.add('filter-monochrome');
+      if (type === 'contrast') board.classList.add('filter-high-contrast');
+
+      announceScreenReader(`Filtro visual cambiado a: ${type}`);
+    }
+
+    // Simulador de Zoom Dinámico
+    function adjustLabZoom(delta) {
+      currentZoom = Math.min(Math.max(currentZoom + delta, 0.9), 1.45);
+      const board = document.getElementById('sandbox-board-element');
+      board.style.fontSize = `${currentZoom}rem`;
+      announceScreenReader(`Tamaño de texto ajustado a ${Math.round(currentZoom * 100)} por ciento`);
+    }
+
+    // Alternar Tipografía para Dislexia
+    function toggleDyslexia() {
+      isDyslexic = !isDyslexic;
+      const board = document.getElementById('sandbox-board-element');
+      const btn = document.getElementById('btn-dyslexia');
+      if (isDyslexic) {
+        board.classList.add('font-dyslexic');
+        btn.classList.add('active');
+        announceScreenReader('Modo tipografía para dislexia activado');
+      } else {
+        board.classList.remove('font-dyslexic');
+        btn.classList.remove('active');
+        announceScreenReader('Modo tipografía para dislexia desactivado');
+      }
+    }
+
+    // Síntesis de Voz Web Speech API (TTS en Español)
+    function speakLabText(scope) {
+      if (!('speechSynthesis' in window)) {
+        alert('Web Speech API no disponible en este navegador.');
+        return;
+      }
+
+      window.speechSynthesis.cancel();
+
+      let textToSpeak = '';
+      if (scope === 'A01') {
+        textToSpeak = 'Bahía A-01. Estado disponible para automóvil. Tarifa tres mil quinientos pesos por hora.';
+      } else if (scope === 'A02') {
+        textToSpeak = 'Bahía A-02. Estado ocupado por vehículo de placas KLO 912. Tiempo de estancia una hora y cuarenta y dos minutos. Total acumulado seis mil trescientos pesos.';
+      } else if (scope === 'A03') {
+        textToSpeak = 'Bahía A-03. Estado reservado mediante aplicación móvil para conductor. Tiempo estimado de llegada doce minutos.';
+      } else if (scope === 'A04') {
+        textToSpeak = 'Bahía A-04. Estado en mantenimiento técnico. Sensor IoT en calibración, no disponible para cobro.';
+      } else if (scope === 'ticket') {
+        textToSpeak = 'Ticket digital Parkia. Placa KLO 912. Ingreso a las diez y cuarenta y cinco de la mañana. Bahía A-02. Tiempo total una hora y cuarenta y dos minutos. Total a cobrar seis mil trescientos pesos colombianos.';
+      } else {
+        textToSpeak = 'Sistema de gestión inteligente Parkia. Patio principal con cuatro bahías supervisadas: Bahía A-01 disponible, Bahía A-02 ocupada con placas KLO 912, Bahía A-03 reservada, y Bahía A-04 en mantenimiento. Ticket activo por seis mil trescientos pesos.';
+      }
+
+      const utterance = new SpeechSynthesisUtterance(textToSpeak);
+      utterance.lang = 'es-CO'; // Español
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+      window.speechSynthesis.speak(utterance);
+    }
+
+    // Anunciador Accesible ARIA-Live
+    function announceScreenReader(msg) {
+      let announcer = document.getElementById('sr-announcer');
+      if (!announcer) {
+        announcer = document.createElement('div');
+        announcer.id = 'sr-announcer';
+        announcer.setAttribute('aria-live', 'polite');
+        announcer.setAttribute('aria-atomic', 'true');
+        announcer.style.position = 'absolute';
+        announcer.style.width = '1px';
+        announcer.style.height = '1px';
+        announcer.style.margin = '-1px';
+        announcer.style.padding = '0';
+        announcer.style.overflow = 'hidden';
+        announcer.style.clip = 'rect(0, 0, 0, 0)';
+        announcer.style.border = '0';
+        document.body.appendChild(announcer);
+      }
+      announcer.textContent = msg;
+    }
+  </script>
+</body>
+</html>

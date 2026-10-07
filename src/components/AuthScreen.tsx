@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import { Icon } from "./Icon";
 import { parkiaActions } from "../store/parkiaStore";
+import { AccessibilityWidget } from "./AccessibilityWidget";
 
 export function AuthScreen() {
   const [role, setRole] = useState<"driver" | "admin">("driver");
   const [subTab, setSubTab] = useState<"login" | "register">("login");
+  const [a11yOpen, setA11yOpen] = useState(false);
 
   // Driver Login
   const [driverEmail, setDriverEmail] = useState("");
@@ -82,12 +84,23 @@ export function AuthScreen() {
     <div className="auth-wrapper">
       <div className="auth-card">
         {/* Encabezado de Marca */}
-        <div className="auth-brand">
-          <span>P</span>
-          <div>
-            <strong>Parkia</strong>
-            <small>Sistema Digital de Parqueaderos Inteligentes</small>
+        <div className="auth-brand" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <span>P</span>
+            <div>
+              <strong>Parkia</strong>
+              <small>Sistema Digital de Parqueaderos Inteligentes</small>
+            </div>
           </div>
+          <button
+            type="button"
+            className="auth-a11y-pill"
+            onClick={() => setA11yOpen(true)}
+            title="Herramientas de Accesibilidad Universal (Alt + A)"
+            aria-label="Abrir herramientas de accesibilidad universal"
+          >
+            <span aria-hidden="true" style={{ fontSize: 16 }}>♿</span>
+          </button>
         </div>
 
         {/* Selector de Rol Unificado */}
@@ -352,6 +365,14 @@ export function AuthScreen() {
           </form>
         )}
       </div>
+
+      {/* Modal de Accesibilidad Universal */}
+      <AccessibilityWidget
+        variant="operator"
+        isOpen={a11yOpen}
+        onClose={() => setA11yOpen(false)}
+        onOpen={() => setA11yOpen(true)}
+      />
     </div>
   );
 }

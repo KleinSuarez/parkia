@@ -281,18 +281,21 @@ export function CashierDesk() {
             </div>
 
             {/* Lista detallada de vehículos en patio */}
-            <div style={{ maxHeight: 380, overflowY: "auto", border: "1px solid #e2e8f0", borderRadius: 10, padding: "4px 0" }}>
+            <div style={{ maxHeight: 380, overflowY: "auto", border: "1px solid #e2e8f0", borderRadius: 10, padding: "4px 0" }} role="list" aria-label="Vehículos activos en el parqueadero">
               {filteredVehicles.map((v) => {
                 const isSel = selectedVehicle?.id === v.id;
                 const mins = Math.max(1, Math.round((Date.now() - v.entryTimestamp) / (60 * 1000)));
                 return (
-                  <div
+                  <button
                     key={v.id}
+                    type="button"
                     className={`pos-vehicle-row ${isSel ? "selected" : ""}`}
+                    aria-label={`Seleccionar vehículo placa ${v.plate}, ${v.brand}, ingresó a las ${v.entryTime} (${mins} minutos), bahía ${v.spotCode}, estado ${v.status === 'paid' ? 'pagado' : 'pendiente de pago'}`}
                     onClick={() => {
                       setSelectedVehicle(v);
                       setPaidReceipt(null);
                     }}
+                    style={{ width: "100%", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}
                   >
                     <div>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -309,7 +312,7 @@ export function CashierDesk() {
                       </small>
                     </div>
                     <Icon name="chevron" size={16} />
-                  </div>
+                  </button>
                 );
               })}
             </div>
