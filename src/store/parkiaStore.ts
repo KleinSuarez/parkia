@@ -485,10 +485,10 @@ const defaultState: ParkiaState = {
   parkedVehicles: [
     {
       id: "SES-94001",
-      plate: "JHT · 482",
+      plate: "COL · 551",
       vehicleType: "car",
-      brand: "Chevrolet Tracker",
-      color: "Gris grafito",
+      brand: "Kia Sportage",
+      color: "Plata",
       entryTime: "08:42 a. m.",
       entryTimestamp: Date.now() - 138 * 60 * 1000,
       accessGate: "Entrada Norte",
@@ -584,7 +584,7 @@ const defaultState: ParkiaState = {
     },
     {
       id: "lpr-2",
-      plate: "JHT · 482",
+      plate: "COL · 551",
       time: "08:42 a. m.",
       date: "Hoy, 12 jun",
       gate: "Entrada Norte",
@@ -669,19 +669,23 @@ function loadState(): ParkiaState {
     const parsed = JSON.parse(raw);
     const hasMotorcycleSpots = parsed.spots && parsed.spots.some((s: ParkingSpot) => s.type === "motorcycle");
     const hasMotorcycleVeh = parsed.vehicles && parsed.vehicles.some((v: any) => v.type === "Motocicleta");
-    const isOldMockSession = parsed.activeSession && (parsed.activeSession.elapsedMinutes === 138 || parsed.activeSession.plate === "JHT · 482" && parsed.activeSession.status === "active" && !parsed.activeSession.entryTimestamp);
+
+    // Sanitizar parkedVehicles para que nunca contenga el auto de Carlos (JHT · 482)
+    const rawParked = parsed.parkedVehicles && parsed.parkedVehicles.length > 0 ? parsed.parkedVehicles : defaultState.parkedVehicles;
+    const sanitizedParked = rawParked.map((pv: any) =>
+      pv.plate.replace(/\s/g, "") === "JHT·482" || pv.plate.replace(/\s/g, "") === "JHT-482"
+        ? { ...pv, plate: "COL · 551", brand: "Kia Sportage" }
+        : pv
+    );
 
     return {
       ...defaultState,
       ...parsed,
       spots: hasMotorcycleSpots ? parsed.spots : defaultState.spots,
       vehicles: hasMotorcycleVeh ? parsed.vehicles : defaultState.vehicles,
-      activeSession: isOldMockSession ? null : (parsed.activeSession ?? null),
+      activeSession: null, // Inicio 100% limpio garantizado
       shift: { ...defaultState.shift, ...(parsed.shift || {}) },
-      parkedVehicles:
-        parsed.parkedVehicles && parsed.parkedVehicles.length > 0
-          ? parsed.parkedVehicles
-          : defaultState.parkedVehicles,
+      parkedVehicles: sanitizedParked,
       lprCaptures:
         parsed.lprCaptures && parsed.lprCaptures.length > 0
           ? parsed.lprCaptures
@@ -719,8 +723,10 @@ function startSimulationTicker() {
   tickerInterval = setInterval(() => {
     if (!currentState.activeSession || currentState.activeSession.status !== "active") return;
     const newMinutes = currentState.activeSession.elapsedMinutes + 1;
-    const rate = currentState.tariffs.carRate;
-    const newCost = Math.min(newMinutes * rate, currentState.tariffs.carCap);
+    const isMoto = currentState.activeSession.vehicleType === "motorcycle";
+    const rate = isMoto ? currentState.tariffs.motoRate : currentState.tariffs.carRate;
+    const cap = isMoto ? currentState.tariffs.motoCap : currentState.tariffs.carCap;
+    const newCost = Math.min(newMinutes * rate, cap);
 
     currentState = {
       ...currentState,
@@ -748,6 +754,7 @@ export const parkiaActions = {
     if (role === "driver") {
       currentState = {
         ...currentState,
+        activeSession: null, // Conductor inicia siempre limpio sin sesión activa
         currentUser: {
           id: "u1",
           name: "Carlos Martínez",
@@ -792,6 +799,7 @@ export const parkiaActions = {
 
     currentState = {
       ...currentState,
+      activeSession: isDriver ? null : currentState.activeSession, // Conductor inicia limpio
       currentUser: {
         id: "user-" + Date.now(),
         name,
@@ -857,6 +865,7 @@ export const parkiaActions = {
     currentState = {
       ...currentState,
       currentUser: null,
+      activeSession: null,
     };
     emitChange();
   },
