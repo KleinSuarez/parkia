@@ -82,11 +82,38 @@ export function MobileDriverApp({
   // Payment filter & export states
   const [paymentFilter, setPaymentFilter] = useState<"todos" | "pendientes" | "pagados">("todos");
   const [exportSheetOpen, setExportSheetOpen] = useState(false);
+  const [exportStartDate, setExportStartDate] = useState("");
+  const [exportEndDate, setExportEndDate] = useState("");
 
   const currentUser = state.currentUser;
   const primaryVehicle = state.vehicles.find((v) => v.isPrimary) || state.vehicles[0];
   const activeSession = state.activeSession;
-  const currentRate = activeSession?.vehicleType === "motorcycle" ? 35 : state.tariffs.carRate;
+  const isVehicleParked = Boolean(
+    activeSession &&
+      activeSession.status === "active" &&
+      (!primaryVehicle ||
+        activeSession.plate.replace(/\s/g, "").toUpperCase() ===
+          primaryVehicle.plate.replace(/\s/g, "").toUpperCase())
+  );
+
+  const isVehicleMoto =
+    primaryVehicle?.type === "Motocicleta" || activeSession?.vehicleType === "motorcycle";
+  const currentRate = isVehicleMoto ? (state.tariffs.motoRate || 35) : state.tariffs.carRate;
+  const currentCap = isVehicleMoto ? (state.tariffs.motoCap || 25000) : state.tariffs.carCap;
+
+  const elapsedMin = activeSession?.elapsedMinutes || 0;
+  const targetSessionCost = activeSession?.totalCost || 0;
+  const hours = Math.floor(elapsedMin / 60);
+  const minutes = elapsedMin % 60;
+  const timeFormatted = `${String(hours).padStart(2, "0")} h ${String(minutes).padStart(2, "0")} min`;
+
+  const currentParkedPlate = activeSession?.plate || primaryVehicle?.plate || "JHT · 482";
+  const currentParkedEntryTime = activeSession?.entryTime || "08:42 a. m.";
+  const currentParkedGate = activeSession?.accessGate || "Entrada Norte";
+
+  const elapsedParkedMins = activeSession ? activeSession.elapsedMinutes : 0;
+  const displayedTimeFormatted = activeSession ? timeFormatted : "0 min";
+  const displayedCost = activeSession ? targetSessionCost : 0;
 
   // Formatters
   const currencyFmt = new Intl.NumberFormat("es-CO", {
@@ -133,6 +160,75 @@ export function MobileDriverApp({
     actions.releaseSpot(selectedSpot.id, mapFloor);
     showToast(`Reserva de bahía ${selectedSpot.id} cancelada.`);
     setSelectedSpot(null);
+  }
+
+  // Parseo y filtrado de comprobantes para exportación
+  function parseHistoryDate(dateStr: string): Date | null {
+    if (!dateStr) return null;
+    if (dateStr.toLowerCase().startsWith("hoy")) {
+      return new Date();
+    }
+    const monthsEs: Record<string, number> = {
+      ene: 0, feb: 1, mar: 2, abr: 3, may: 4, jun: 5,
+      jul: 6, ago: 7, sep: 8, oct: 9, nov: 10, dic: 11
+    };
+    const match = dateStr.match(/(\d{1,2})\s+([a-záéíóú]+)[,\s]+(\d{4})/i);
+    if (match) {
+      const day = parseInt(match[1], 10);
+      const monthKey = match[2].toLowerCase().slice(0, 3);
+      const year = parseInt(match[3], 10);
+      const month = monthsEs[monthKey] ?? 0;
+      return new Date(year, month, day);
+    }
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  function getHistoryInDateRange(start?: string, end?: string) {
+    if (!start && !end) return state.history;
+    const sDate = start ? new Date(start + "T00:00:00") : null;
+    const eDate = end ? new Date(end + "T23:59:59") : null;
+    return state.history.filter((h) => {
+      const itemDate = parseHistoryDate(h.date);
+      if (!itemDate) return true;
+      if (sDate && itemDate < sDate) return false;
+      if (eDate && itemDate > eDate) return false;
+      return true;
+    });
+  }
+
+  // Exportar comprobantes por rango de fechas en CSV
+  function exportHistoryCsvRange(start?: string, end?: string) {
+    const listToExport = getHistoryInDateRange(start, end);
+    if (listToExport.length === 0) {
+      showToast("No se encontraron comprobantes en el rango de fechas seleccionado.");
+      return;
+    }
+    const headers = ["ID", "Placa", "Fecha", "Duración", "Total COP", "Estado", "Método", "QR Salida"];
+    const rows = listToExport.map((h) => [
+      h.id,
+      h.plate,
+      `"${h.date}"`,
+      `"${h.duration}"`,
+      h.total,
+      h.status === "paid" ? "Pagado" : h.status === "pending" ? "Pendiente" : "Activo",
+      `"${h.method || ""}"`,
+      `"${h.qrCode || ""}"`,
+    ]);
+
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    const label = start && end ? `${start}-al-${end}` : start ? `desde-${start}` : end ? `hasta-${end}` : "Filtrado";
+    link.download = `Historial-Pagos-Parkia-${label}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showToast(`Exportados ${listToExport.length} comprobantes en archivo CSV (${label})`);
+    setExportSheetOpen(false);
   }
 
   // Exportar comprobantes por cantidad en CSV
@@ -202,13 +298,7 @@ export function MobileDriverApp({
     setEditProfileSheet(false);
   }
 
-  // ── Session timer math (solo cuando hay sesión activa) ──
-  const elapsedMin = activeSession?.elapsedMinutes || 0;
-  const targetSessionCost = activeSession?.totalCost || 0;
-  
-  const hours = Math.floor(elapsedMin / 60);
-  const minutes = elapsedMin % 60;
-  const timeFormatted = `${String(hours).padStart(2, "0")} h ${String(minutes).padStart(2, "0")} min`;
+  // ── Session timer math ya computado en cabecera ──
 
   const lastPaidSession = state.history.find(
     (h) => h.plate === (activeSession?.plate || primaryVehicle?.plate) && h.status === "paid"
@@ -290,6 +380,9 @@ export function MobileDriverApp({
               <div>
                 <small>Hola, {currentUser?.name.split(" ")[0] || "Carlos"}</small>
                 <strong>Parking Central</strong>
+                <span style={{ fontSize: 9.5, color: "#0d766e", fontWeight: 700, display: "flex", alignItems: "center", gap: 3, marginTop: 1 }}>
+                  <Icon name="map" size={10} /> A 350 m (4 min)
+                </span>
               </div>
             </button>
 
@@ -300,9 +393,21 @@ export function MobileDriverApp({
                   className="vehicle-selector-pill"
                   onClick={() => setVehicleSelectorSheet(true)}
                   title="Cambiar vehículo activo"
+                  style={{
+                    border: isVehicleParked ? "1.5px solid #10b981" : undefined,
+                    background: isVehicleParked ? "#f0fdf4" : undefined,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 5,
+                  }}
                 >
                   <Icon name="car" size={14} />
                   <span>{primaryVehicle.plate}</span>
+                  {isVehicleParked && (
+                    <span style={{ fontSize: 9.5, fontWeight: 800, color: "#059669", background: "#dcfce7", padding: "1px 5px", borderRadius: 4 }}>
+                      🅿️ Parqueado
+                    </span>
+                  )}
                   <Icon name="chevron" size={12} />
                 </button>
               )}
@@ -348,6 +453,41 @@ export function MobileDriverApp({
           {/* ════ TAB 1: INICIO (HOME GLANCEABLE) ════ */}
           {tab === "inicio" && (
             <div className="mobile-page-content">
+              {/* Banner Sede y Distancia al Parqueadero */}
+              <div
+                style={{
+                  background: "#ffffff",
+                  borderRadius: 14,
+                  padding: "10px 14px",
+                  border: "1.5px solid #ccfbf1",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  boxShadow: "0 2px 6px rgba(13, 118, 110, 0.05)",
+                  marginBottom: 12,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ background: "#ccfbf1", color: "#0f766e", borderRadius: 10, padding: "7px 8px", display: "flex" }}>
+                    <Icon name="map" size={17} />
+                  </span>
+                  <div>
+                    <strong style={{ fontSize: 13, color: "#134e4a", display: "block" }}>Sede Parking Central</strong>
+                    <span style={{ fontSize: 11.5, color: "#0d766e", fontWeight: 700 }}>
+                      📍 A 350 m de tu ubicación actual · ~4 min en auto
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="secondary compact"
+                  style={{ fontSize: 11, padding: "5px 10px", borderRadius: 8, fontWeight: 700 }}
+                  onClick={() => setTab("mapa")}
+                >
+                  Ver sede
+                </button>
+              </div>
+
               {/* Tarjeta de Sesión Activa, Liquidada o Estado Inicial sin Estancia */}
               {activeSession && activeSession.status === "completed" ? (
                 <section className="mobile-session-card" style={{ border: "1px solid #10b981", background: "linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)" }}>
@@ -431,31 +571,53 @@ export function MobileDriverApp({
                     </button>
                   </div>
                 </section>
-              ) : activeSession && activeSession.status === "active" ? (
+              ) : (activeSession && activeSession.status === "active") || isVehicleParked ? (
                 <section className="mobile-session-card">
                   <div className="mobile-session-top">
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <span className="live-dot" />
-                      <Badge tone="green">Estancia Activa</Badge>
+                      <Badge tone="green">🅿️ Vehículo Parqueado</Badge>
                     </div>
-                    <span className="mobile-plate-badge">{activeSession.plate}</span>
+                    <span className="mobile-plate-badge">{currentParkedPlate}</span>
+                  </div>
+
+                  {/* Indicativo sencillo y claro de vehículo parqueado */}
+                  <div
+                    style={{
+                      background: "#f0fdf4",
+                      border: "1.5px solid #bbf7d0",
+                      borderRadius: 12,
+                      padding: "10px 14px",
+                      margin: "8px 0 12px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      fontSize: 12.5,
+                      color: "#166534",
+                    }}
+                  >
+                    <div>
+                      <strong style={{ display: "block", fontSize: 13 }}>🅿️ Vehículo estacionado en bahía</strong>
+                      <span>Ubicación: <strong>Bahía activa ({mapFloor})</strong> · Entrada {currentParkedEntryTime}</span>
+                    </div>
+                    <span style={{ fontWeight: 800, color: "#15803d" }}>LPR Activo</span>
                   </div>
 
                   <div className="mobile-session-metrics">
                     <div className="mobile-session-metric">
                       <span>Tiempo transcurrido</span>
-                      <strong>{timeFormatted}</strong>
+                      <strong>{displayedTimeFormatted}</strong>
                       <small style={{ fontSize: 9, color: "#879996" }}>
-                        Entrada: {activeSession.entryTime}
+                        Ingreso por {currentParkedGate}
                       </small>
                     </div>
                     <div className="mobile-session-metric cost">
                       <span>Costo acumulado</span>
                       <strong>
-                        <SmoothCounter value={targetSessionCost} formatValue={(v) => currencyFmt.format(v)} />
+                        <SmoothCounter value={displayedCost} formatValue={(v) => currencyFmt.format(v)} />
                       </strong>
-                      <small style={{ fontSize: 9, color: "#0d766e" }}>
-                        Tarifa: ${currentRate} / min ({activeSession.vehicleType === "motorcycle" ? "Moto" : "Carro"})
+                      <small style={{ fontSize: 9.5, color: "#0d766e", fontWeight: 700 }}>
+                        Tarifa: ${currentRate}/min ({isVehicleMoto ? "Moto" : "Carro"}) · Tope máx: {currencyFmt.format(currentCap)}/día
                       </small>
                     </div>
                   </div>
@@ -465,13 +627,13 @@ export function MobileDriverApp({
                     className="primary sheet-cta-btn"
                     onClick={() => {
                       setPayingSession({
-                        id: "SES-ACTIVA",
-                        date: "Hoy, " + activeSession.entryTime,
-                        plate: activeSession.plate,
-                        duration: timeFormatted,
-                        durationMinutes: elapsedMin,
+                        id: activeSession ? "SES-ACTIVA" : "SES-ACTIVA",
+                        date: "Hoy, " + currentParkedEntryTime,
+                        plate: currentParkedPlate,
+                        duration: displayedTimeFormatted,
+                        durationMinutes: elapsedParkedMins,
                         status: "pending",
-                        total: targetSessionCost,
+                        total: displayedCost,
                       });
                     }}
                   >
@@ -504,13 +666,15 @@ export function MobileDriverApp({
                     <p style={{ margin: 0, fontSize: 12, color: "#556e69", lineHeight: 1.4 }}>
                       No tienes ninguna estancia en curso. Selecciona una bahía en el mapa para reservar con 15 min de anticipación.
                     </p>
-                    <div style={{ display: "flex", gap: 12, marginTop: 12, fontSize: 11, color: "#0d766e", fontWeight: 700 }}>
-                      <span style={{ background: "#f0fdfa", padding: "4px 8px", borderRadius: 6, border: "1px solid #ccfbf1" }}>
-                        🚗 Carro: $65 / min
-                      </span>
-                      <span style={{ background: "#faf5ff", padding: "4px 8px", borderRadius: 6, border: "1px solid #f3e8ff", color: "#7e22ce" }}>
-                        🏍️ Moto: $35 / min
-                      </span>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 12 }}>
+                      <div style={{ display: "flex", gap: 8, fontSize: 11, fontWeight: 700, flexWrap: "wrap" }}>
+                        <span style={{ background: "#f0fdfa", padding: "5px 9px", borderRadius: 6, border: "1px solid #ccfbf1", color: "#0d766e" }}>
+                          🚗 Carro: $65 / min · Tope máx: $42.000 / día
+                        </span>
+                        <span style={{ background: "#faf5ff", padding: "5px 9px", borderRadius: 6, border: "1px solid #f3e8ff", color: "#7e22ce" }}>
+                          🏍️ Moto: $35 / min · Tope máx: $25.000 / día
+                        </span>
+                      </div>
                     </div>
                   </div>
 
@@ -749,12 +913,26 @@ export function MobileDriverApp({
                       <Icon name="car" size={26} />
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                        <Badge tone={v.isPrimary ? "green" : "neutral"}>
-                          {v.isPrimary ? "Principal" : "Secundario"}
-                        </Badge>
-                        <small style={{ color: "#748683" }}>{v.type}</small>
-                      </div>
+                      {(() => {
+                        const isThisParked =
+                          activeSession?.plate.replace(/\s/g, "").toUpperCase() ===
+                            v.plate.replace(/\s/g, "").toUpperCase() &&
+                          activeSession?.status === "active";
+
+                        return (
+                          <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                            <Badge tone={v.isPrimary ? "green" : "neutral"}>
+                              {v.isPrimary ? "Principal" : "Secundario"}
+                            </Badge>
+                            {isThisParked && (
+                              <Badge tone="green">
+                                🅿️ Parqueado
+                              </Badge>
+                            )}
+                            <small style={{ color: "#748683" }}>{v.type}</small>
+                          </div>
+                        );
+                      })()}
                       <h4 style={{ margin: "4px 0 1px", fontSize: 16 }}>{v.plate}</h4>
                       <p style={{ margin: 0, fontSize: 11, color: "#7a8a87" }}>
                         {v.brand} {v.model}
@@ -933,7 +1111,7 @@ export function MobileDriverApp({
               </div>
 
               {/* Estancia en Curso para Pagar */}
-              {activeSession && activeSession.status === "active" && (
+              {((activeSession && activeSession.status === "active") || isVehicleParked) && (
                 <div
                   style={{
                     background: "#ffffff",
@@ -947,19 +1125,45 @@ export function MobileDriverApp({
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <span className="live-dot" />
-                      <strong style={{ fontSize: 14, color: "#0d766e" }}>Estancia en Curso</strong>
+                      <strong style={{ fontSize: 14, color: "#0d766e" }}>Estancia en Curso · 🅿️ Parqueado</strong>
                     </div>
-                    <span className="plate-small">{activeSession.plate}</span>
+                    <span className="plate-small">{currentParkedPlate}</span>
                   </div>
 
-                  <div style={{ display: "flex", justifyContent: "space-between", margin: "12px 0 14px", alignItems: "baseline" }}>
+                  {/* Detalle explícito de tarifa por minuto y tope diario */}
+                  <div
+                    style={{
+                      background: "#f0fdfa",
+                      border: "1px solid #ccfbf1",
+                      borderRadius: 10,
+                      padding: "8px 12px",
+                      margin: "10px 0 12px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      fontSize: 11.5,
+                      color: "#0f766e",
+                      fontWeight: 700,
+                    }}
+                  >
+                    <span>⚡ Tarifa: ${currentRate}/min ({isVehicleMoto ? "Moto" : "Carro"})</span>
+                    <span>Tope máx: {currencyFmt.format(currentCap)}/día</span>
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "space-between", margin: "10px 0 14px", alignItems: "baseline" }}>
                     <div>
                       <small style={{ color: "#667774", display: "block" }}>Tiempo acumulado</small>
-                      <strong style={{ fontSize: 15, color: "#142523" }}>{timeFormatted}</strong>
+                      <strong style={{ fontSize: 16, color: "#142523" }}>{displayedTimeFormatted}</strong>
+                      <small style={{ fontSize: 10, color: "#0d766e", display: "block", marginTop: 2, fontWeight: 700 }}>
+                        ${currentRate} COP por minuto
+                      </small>
                     </div>
                     <div style={{ textAlign: "right" }}>
                       <small style={{ color: "#667774", display: "block" }}>Total a liquidar</small>
-                      <strong style={{ fontSize: 18, color: "#0d766e" }}>{currencyFmt.format(targetSessionCost)}</strong>
+                      <strong style={{ fontSize: 20, color: "#0d766e" }}>{currencyFmt.format(displayedCost)}</strong>
+                      <small style={{ fontSize: 10, color: "#64748b", display: "block", marginTop: 2 }}>
+                        Tope aplicado si supera {currencyFmt.format(currentCap)}
+                      </small>
                     </div>
                   </div>
 
@@ -969,13 +1173,13 @@ export function MobileDriverApp({
                     style={{ height: 44, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
                     onClick={() => {
                       setPayingSession({
-                        id: "SES-ACTIVA",
-                        date: "Hoy, " + activeSession.entryTime,
-                        plate: activeSession.plate,
-                        duration: timeFormatted,
-                        durationMinutes: activeSession.elapsedMinutes,
+                        id: activeSession ? "SES-ACTIVA" : "SES-ACTIVA",
+                        date: "Hoy, " + currentParkedEntryTime,
+                        plate: currentParkedPlate,
+                        duration: displayedTimeFormatted,
+                        durationMinutes: elapsedParkedMins,
                         status: "pending",
-                        total: targetSessionCost,
+                        total: displayedCost,
                       });
                     }}
                   >
@@ -1205,8 +1409,32 @@ export function MobileDriverApp({
                         ? "⚡ Cargador EV ($65/min)"
                         : "🚗 Carro / Camioneta ($65/min)"}
                     </strong>
-                    <small style={{ fontSize: 9 }}>A {selectedSpot.distanceElevator}m del ascensor</small>
+                    <small style={{ fontSize: 10, color: "#0d766e", fontWeight: 700 }}>
+                      Tope diario máx: {selectedSpot.type === "motorcycle" ? "$25.000" : "$42.000"} / día
+                    </small>
                   </div>
+                </div>
+
+                {/* Distancia visible y destacada al ascensor principal */}
+                <div
+                  style={{
+                    background: "#f0fdfa",
+                    border: "1.5px solid #99f6e4",
+                    borderRadius: 10,
+                    padding: "9px 12px",
+                    margin: "10px 0 14px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    fontSize: 12.5,
+                    color: "#0f766e",
+                    fontWeight: 650,
+                  }}
+                >
+                  <Icon name="map" size={16} />
+                  <span>
+                    Distancia al ascensor: <strong>{selectedSpot.distanceElevator} metros</strong> (~{Math.max(1, Math.round(selectedSpot.distanceElevator / 15))} min caminando)
+                  </span>
                 </div>
 
                 {/* Banner de incompatibilidad si el tipo no coincide */}
@@ -1300,59 +1528,146 @@ export function MobileDriverApp({
                 </button>
               </div>
 
-              <p style={{ margin: "0 0 16px 0", fontSize: 13, color: "var(--text-secondary)" }}>
-                Descarga un archivo CSV detallado con tus comprobantes, fechas, duraciones, métodos y montos abonados.
+              <p style={{ margin: "0 0 14px 0", fontSize: 13, color: "var(--text-secondary)" }}>
+                Descarga un reporte CSV detallado con tus comprobantes por rango de fechas o por cantidad rápida.
               </p>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {/* Selector de Rango de Fechas */}
+              <div
+                style={{
+                  background: "#f8fafc",
+                  border: "1.5px solid #cbd5e1",
+                  borderRadius: 12,
+                  padding: 14,
+                  marginBottom: 14,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+                  <Icon name="calendar" size={16} />
+                  <strong style={{ fontSize: 13, color: "#1e293b" }}>Descargar por Rango de Fechas</strong>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+                  <div>
+                    <label style={{ fontSize: 11, color: "#64748b", display: "block", marginBottom: 4, fontWeight: 700 }}>
+                      Desde:
+                    </label>
+                    <input
+                      type="date"
+                      value={exportStartDate}
+                      onChange={(e) => setExportStartDate(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "7px 8px",
+                        borderRadius: 8,
+                        border: "1px solid #cbd5e1",
+                        fontSize: 12,
+                        background: "#ffffff",
+                        boxSizing: "border-box",
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, color: "#64748b", display: "block", marginBottom: 4, fontWeight: 700 }}>
+                      Hasta:
+                    </label>
+                    <input
+                      type="date"
+                      value={exportEndDate}
+                      onChange={(e) => setExportEndDate(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "7px 8px",
+                        borderRadius: 8,
+                        border: "1px solid #cbd5e1",
+                        fontSize: 12,
+                        background: "#ffffff",
+                        boxSizing: "border-box",
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {(() => {
+                  const filteredCount = getHistoryInDateRange(exportStartDate, exportEndDate).length;
+                  return (
+                    <button
+                      type="button"
+                      className="primary"
+                      style={{
+                        width: "100%",
+                        padding: "10px 14px",
+                        borderRadius: 10,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 8,
+                        fontSize: 13,
+                        fontWeight: 700,
+                      }}
+                      onClick={() => {
+                        exportHistoryCsvRange(exportStartDate, exportEndDate);
+                      }}
+                    >
+                      <Icon name="download" size={16} />
+                      Exportar Rango ({filteredCount} comprobantes)
+                    </button>
+                  );
+                })()}
+              </div>
+
+              {/* Atajos Rápidos por Cantidad */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <small style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>
+                  O descargar por cantidad rápida:
+                </small>
                 <button
                   type="button"
                   className="secondary"
-                  style={{ justifyContent: "flex-start", padding: "12px 16px", borderRadius: 12, display: "flex", alignItems: "center", gap: 12 }}
+                  style={{ justifyContent: "flex-start", padding: "10px 14px", borderRadius: 10, display: "flex", alignItems: "center", gap: 10 }}
                   onClick={() => {
                     exportHistoryCsv(5);
                     setExportSheetOpen(false);
                     showToast("Exportando últimos 5 comprobantes...");
                   }}
                 >
-                  <Icon name="download" size={18} />
+                  <Icon name="download" size={16} />
                   <div style={{ textAlign: "left" }}>
-                    <strong style={{ display: "block", fontSize: 14 }}>Últimos 5 comprobantes</strong>
-                    <small style={{ color: "var(--text-secondary)" }}>Resumen reciente de tus estancias</small>
+                    <strong style={{ display: "block", fontSize: 13 }}>Últimos 5 comprobantes</strong>
+                    <small style={{ color: "var(--text-secondary)", fontSize: 11 }}>Resumen reciente de tus estancias</small>
                   </div>
                 </button>
 
                 <button
                   type="button"
                   className="secondary"
-                  style={{ justifyContent: "flex-start", padding: "12px 16px", borderRadius: 12, display: "flex", alignItems: "center", gap: 12 }}
+                  style={{ justifyContent: "flex-start", padding: "10px 14px", borderRadius: 10, display: "flex", alignItems: "center", gap: 10 }}
                   onClick={() => {
                     exportHistoryCsv(10);
                     setExportSheetOpen(false);
                     showToast("Exportando últimos 10 comprobantes...");
                   }}
                 >
-                  <Icon name="download" size={18} />
+                  <Icon name="download" size={16} />
                   <div style={{ textAlign: "left" }}>
-                    <strong style={{ display: "block", fontSize: 14 }}>Últimos 10 comprobantes</strong>
-                    <small style={{ color: "var(--text-secondary)" }}>Historial extendido de movimientos</small>
+                    <strong style={{ display: "block", fontSize: 13 }}>Últimos 10 comprobantes</strong>
+                    <small style={{ color: "var(--text-secondary)", fontSize: 11 }}>Historial extendido de movimientos</small>
                   </div>
                 </button>
 
                 <button
                   type="button"
-                  className="primary"
-                  style={{ justifyContent: "flex-start", padding: "12px 16px", borderRadius: 12, display: "flex", alignItems: "center", gap: 12 }}
+                  className="secondary"
+                  style={{ justifyContent: "flex-start", padding: "10px 14px", borderRadius: 10, display: "flex", alignItems: "center", gap: 10 }}
                   onClick={() => {
                     exportHistoryCsv();
                     setExportSheetOpen(false);
                     showToast(`Exportando historial completo (${state.history.length} registros)...`);
                   }}
                 >
-                  <Icon name="download" size={18} />
+                  <Icon name="download" size={16} />
                   <div style={{ textAlign: "left" }}>
-                    <strong style={{ display: "block", fontSize: 14 }}>Todo el historial ({state.history.length})</strong>
-                    <small style={{ opacity: 0.9 }}>Todos los registros de estancias y pagos</small>
+                    <strong style={{ display: "block", fontSize: 13 }}>Todo el historial ({state.history.length})</strong>
+                    <small style={{ color: "var(--text-secondary)", fontSize: 11 }}>Todos los registros de estancias y pagos</small>
                   </div>
                 </button>
               </div>
