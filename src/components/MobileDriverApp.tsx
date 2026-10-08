@@ -75,14 +75,18 @@ export function MobileDriverApp({
   const [profileDocument, setProfileDocument] = useState("");
   const [profilePhone, setProfilePhone] = useState("");
 
-  // Map floor selection
+  // Map floor and vehicle type selection
   const [mapFloor, setMapFloor] = useState<"Piso 1" | "Piso 2" | "Piso 3">("Piso 2");
-  const [mapFilter, setMapFilter] = useState<"all" | "pmr" | "ev">("all");
+  const [mapFilter, setMapFilter] = useState<"all" | "car" | "motorcycle" | "pmr" | "ev">("all");
+
+  // Payment filter & export states
+  const [paymentFilter, setPaymentFilter] = useState<"todos" | "pendientes" | "pagados">("todos");
+  const [exportSheetOpen, setExportSheetOpen] = useState(false);
 
   const currentUser = state.currentUser;
   const primaryVehicle = state.vehicles.find((v) => v.isPrimary) || state.vehicles[0];
   const activeSession = state.activeSession;
-  const currentRate = state.tariffs.carRate;
+  const currentRate = activeSession?.vehicleType === "motorcycle" ? 35 : state.tariffs.carRate;
 
   // Formatters
   const currencyFmt = new Intl.NumberFormat("es-CO", {
@@ -99,7 +103,7 @@ export function MobileDriverApp({
   function handleReserveSpot() {
     if (!selectedSpot) return;
     actions.reserveSpot(selectedSpot.id, mapFloor);
-    showToast(`¡Bahía ${selectedSpot.id} reservada! Tienes 15 minutos para ingresar.`);
+    showToast(`¡Bahía ${selectedSpot.id} reservada! Sesión iniciada para tu vehículo.`);
     setSelectedSpot(null);
   }
 
@@ -108,6 +112,35 @@ export function MobileDriverApp({
     actions.releaseSpot(selectedSpot.id, mapFloor);
     showToast(`Reserva de bahía ${selectedSpot.id} cancelada.`);
     setSelectedSpot(null);
+  }
+
+  // Exportar comprobantes por cantidad en CSV
+  function exportHistoryCsv(limit?: number) {
+    const listToExport = limit ? state.history.slice(0, limit) : state.history;
+    const headers = ["ID", "Placa", "Fecha", "Duración", "Total COP", "Estado", "Método", "QR Salida"];
+    const rows = listToExport.map((h) => [
+      h.id,
+      h.plate,
+      `"${h.date}"`,
+      `"${h.duration}"`,
+      h.total,
+      h.status === "paid" ? "Pagado" : h.status === "pending" ? "Pendiente" : "Activo",
+      `"${h.method || ""}"`,
+      `"${h.qrCode || ""}"`,
+    ]);
+
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Historial-Pagos-Parkia-${limit ? `Ultimos-${limit}` : "Completo"}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showToast(`Exportados ${listToExport.length} comprobantes en archivo CSV`);
+    setExportSheetOpen(false);
   }
 
   function handleCreateVehicle(e: React.FormEvent) {
@@ -148,9 +181,9 @@ export function MobileDriverApp({
     setEditProfileSheet(false);
   }
 
-  // ── Session timer math (updates on store tick, which represents 1 minute) ──
-  const elapsedMin = activeSession?.elapsedMinutes || 138;
-  const targetSessionCost = activeSession?.totalCost || 8970;
+  // ── Session timer math (solo cuando hay sesión activa) ──
+  const elapsedMin = activeSession?.elapsedMinutes || 0;
+  const targetSessionCost = activeSession?.totalCost || 0;
   
   const hours = Math.floor(elapsedMin / 60);
   const minutes = elapsedMin % 60;
@@ -160,11 +193,21 @@ export function MobileDriverApp({
     (h) => h.plate === (activeSession?.plate || primaryVehicle?.plate) && h.status === "paid"
   );
 
+  // Totales de pagos para el mes
+  const monthlyTotalSpent = state.history
+    .filter((h) => h.status === "paid")
+    .reduce((sum, h) => sum + h.total, 0);
+
+  const pendingCount = state.history.filter((h) => h.status === "pending").length;
+  const paidCount = state.history.filter((h) => h.status === "paid").length;
+
   // Map spots
   const floorSpots = state.spots.filter((s) => s.floor === mapFloor);
   const visibleSpots = floorSpots.filter((s) => {
+    if (mapFilter === "car") return s.type === "car";
+    if (mapFilter === "motorcycle") return s.type === "motorcycle";
     if (mapFilter === "pmr") return s.type === "pmr";
-    if (mapFilter === "ev") return s.hasCharger;
+    if (mapFilter === "ev") return s.type === "ev" || s.hasCharger;
     return true;
   });
 
@@ -284,15 +327,15 @@ export function MobileDriverApp({
           {/* ════ TAB 1: INICIO (HOME GLANCEABLE) ════ */}
           {tab === "inicio" && (
             <div className="mobile-page-content">
-              {/* Tarjeta de Sesión Activa o Liquidada */}
-              {activeSession?.status === "completed" ? (
+              {/* Tarjeta de Sesión Activa, Liquidada o Estado Inicial sin Estancia */}
+              {activeSession && activeSession.status === "completed" ? (
                 <section className="mobile-session-card" style={{ border: "1px solid #10b981", background: "linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)" }}>
                   <div className="mobile-session-top">
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <span className="live-dot" style={{ background: "#10b981" }} />
                       <Badge tone="green">Estancia Liquidada</Badge>
                     </div>
-                    <span className="mobile-plate-badge">{activeSession?.plate || "JHT · 482"}</span>
+                    <span className="mobile-plate-badge">{activeSession.plate}</span>
                   </div>
 
                   <div className="mobile-session-metrics">
@@ -367,14 +410,14 @@ export function MobileDriverApp({
                     </button>
                   </div>
                 </section>
-              ) : (
+              ) : activeSession && activeSession.status === "active" ? (
                 <section className="mobile-session-card">
                   <div className="mobile-session-top">
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <span className="live-dot" />
                       <Badge tone="green">Estancia Activa</Badge>
                     </div>
-                    <span className="mobile-plate-badge">{activeSession?.plate || "JHT · 482"}</span>
+                    <span className="mobile-plate-badge">{activeSession.plate}</span>
                   </div>
 
                   <div className="mobile-session-metrics">
@@ -382,7 +425,7 @@ export function MobileDriverApp({
                       <span>Tiempo transcurrido</span>
                       <strong>{timeFormatted}</strong>
                       <small style={{ fontSize: 9, color: "#879996" }}>
-                        Entrada: {activeSession?.entryTime || "08:42 a. m."}
+                        Entrada: {activeSession.entryTime}
                       </small>
                     </div>
                     <div className="mobile-session-metric cost">
@@ -391,7 +434,7 @@ export function MobileDriverApp({
                         <SmoothCounter value={targetSessionCost} formatValue={(v) => currencyFmt.format(v)} />
                       </strong>
                       <small style={{ fontSize: 9, color: "#0d766e" }}>
-                        Tarifa: ${currentRate} / min
+                        Tarifa: ${currentRate} / min ({activeSession.vehicleType === "motorcycle" ? "Moto" : "Carro"})
                       </small>
                     </div>
                   </div>
@@ -402,8 +445,8 @@ export function MobileDriverApp({
                     onClick={() => {
                       setPayingSession({
                         id: "SES-ACTIVA",
-                        date: "Hoy, " + (activeSession?.entryTime || "08:42 a. m."),
-                        plate: activeSession?.plate || "JHT · 482",
+                        date: "Hoy, " + activeSession.entryTime,
+                        plate: activeSession.plate,
                         duration: timeFormatted,
                         durationMinutes: elapsedMin,
                         status: "pending",
@@ -412,6 +455,50 @@ export function MobileDriverApp({
                     }}
                   >
                     <Icon name="card" size={18} /> Pagar y Finalizar Estancia
+                  </button>
+                </section>
+              ) : (
+                <section
+                  className="mobile-session-card"
+                  style={{
+                    background: "#ffffff",
+                    border: "1px solid #d3dedb",
+                    padding: 18,
+                  }}
+                >
+                  <div className="mobile-session-top">
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span className="live-dot" style={{ background: "#9ca3af" }} />
+                      <Badge tone="neutral">Sin estancia activa</Badge>
+                    </div>
+                    <span className="mobile-plate-badge" style={{ background: "#f3f4f6", color: "#4b5563" }}>
+                      {primaryVehicle?.plate || "JHT · 482"}
+                    </span>
+                  </div>
+
+                  <div style={{ padding: "12px 0 10px" }}>
+                    <h3 style={{ margin: "0 0 6px", fontSize: 16, color: "#142523" }}>
+                      Listo para estacionar
+                    </h3>
+                    <p style={{ margin: 0, fontSize: 12, color: "#556e69", lineHeight: 1.4 }}>
+                      No tienes ninguna estancia en curso. Selecciona una bahía en el mapa para reservar con 15 min de anticipación.
+                    </p>
+                    <div style={{ display: "flex", gap: 12, marginTop: 12, fontSize: 11, color: "#0d766e", fontWeight: 700 }}>
+                      <span style={{ background: "#f0fdfa", padding: "4px 8px", borderRadius: 6, border: "1px solid #ccfbf1" }}>
+                        🚗 Carro: $65 / min
+                      </span>
+                      <span style={{ background: "#faf5ff", padding: "4px 8px", borderRadius: 6, border: "1px solid #f3e8ff", color: "#7e22ce" }}>
+                        🏍️ Moto: $35 / min
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="primary sheet-cta-btn"
+                    onClick={() => setTab("mapa")}
+                  >
+                    <Icon name="map" size={18} /> Explorar celdas y reservar
                   </button>
                 </section>
               )}
@@ -490,7 +577,7 @@ export function MobileDriverApp({
                 })}
               </div>
 
-              {/* Filtro chips */}
+              {/* Filtro chips con Carros y Motos */}
               <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4 }}>
                 <button
                   type="button"
@@ -502,11 +589,27 @@ export function MobileDriverApp({
                 </button>
                 <button
                   type="button"
+                  className={`badge ${mapFilter === "car" ? "active" : "neutral"}`}
+                  onClick={() => setMapFilter("car")}
+                  style={{ cursor: "pointer", padding: "6px 12px" }}
+                >
+                  🚗 Carros ({floorSpots.filter((s) => s.type === "car").length})
+                </button>
+                <button
+                  type="button"
+                  className={`badge ${mapFilter === "motorcycle" ? "active" : "neutral"}`}
+                  onClick={() => setMapFilter("motorcycle")}
+                  style={{ cursor: "pointer", padding: "6px 12px" }}
+                >
+                  🏍️ Motos ({floorSpots.filter((s) => s.type === "motorcycle").length})
+                </button>
+                <button
+                  type="button"
                   className={`badge ${mapFilter === "pmr" ? "active" : "neutral"}`}
                   onClick={() => setMapFilter("pmr")}
                   style={{ cursor: "pointer", padding: "6px 12px" }}
                 >
-                  ♿ PMR Accesible
+                  ♿ PMR ({floorSpots.filter((s) => s.type === "pmr").length})
                 </button>
                 <button
                   type="button"
@@ -514,7 +617,7 @@ export function MobileDriverApp({
                   onClick={() => setMapFilter("ev")}
                   style={{ cursor: "pointer", padding: "6px 12px" }}
                 >
-                  ⚡ Cargador EV
+                  ⚡ EV ({floorSpots.filter((s) => s.type === "ev" || s.hasCharger).length})
                 </button>
               </div>
 
@@ -541,25 +644,50 @@ export function MobileDriverApp({
                     gap: 8,
                   }}
                 >
-                  {visibleSpots.map((s) => (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => setSelectedSpot(s)}
-                      className={`spot ${s.state}`}
-                      style={{
-                        height: 78,
-                        borderRadius: 8,
-                        cursor: "pointer",
-                      }}
-                    >
-                      <strong style={{ fontSize: 13 }}>{s.id}</strong>
-                      <span style={{ fontSize: 9, marginTop: 2 }}>
-                        {s.state === "free" ? "Libre" : s.state === "occupied" ? "Ocupado" : "Reserva"}
-                      </span>
-                      {s.hasCharger && <span style={{ fontSize: 8 }}>⚡</span>}
-                    </button>
-                  ))}
+                  {visibleSpots.map((s) => {
+                    const isMoto = s.type === "motorcycle";
+                    const isPmr = s.type === "pmr";
+                    const isEv = s.type === "ev" || s.hasCharger;
+
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => setSelectedSpot(s)}
+                        className={`spot ${s.state}`}
+                        style={{
+                          height: 82,
+                          borderRadius: 10,
+                          cursor: "pointer",
+                          display: "flex",
+                          flexDirection: "column",
+                          justifyContent: "space-between",
+                          padding: "8px 6px",
+                          border: isMoto ? "2px solid #7e22ce" : undefined,
+                          background: isMoto && s.state === "free" ? "#faf5ff" : undefined,
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", width: "100%", alignItems: "center" }}>
+                          <strong style={{ fontSize: 13 }}>{s.id}</strong>
+                          <span style={{ fontSize: 13 }} title={isMoto ? "Bahía Moto" : isPmr ? "PMR" : isEv ? "EV" : "Carro"}>
+                            {isMoto ? "🏍️" : isPmr ? "♿" : isEv ? "⚡" : "🚗"}
+                          </span>
+                        </div>
+                        <span
+                          style={{
+                            fontSize: 9,
+                            fontWeight: 800,
+                            color: isMoto ? "#7e22ce" : isPmr ? "#2563eb" : isEv ? "#059669" : "#0d766e",
+                          }}
+                        >
+                          {isMoto ? "MOTO" : isPmr ? "PMR" : isEv ? "EV" : "CARRO"}
+                        </span>
+                        <span style={{ fontSize: 9 }}>
+                          {s.state === "free" ? "Libre" : s.state === "occupied" ? "Ocupado" : "Reserva"}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -747,6 +875,42 @@ export function MobileDriverApp({
                 <Icon name="card" size={28} />
               </div>
 
+              {/* Tarjeta de Gasto Total del Mes & Botón de Exportar por Cantidad */}
+              <div
+                style={{
+                  background: "#ffffff",
+                  borderRadius: 14,
+                  padding: "16px 18px",
+                  border: "1px solid #d1dedb",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginTop: 10,
+                }}
+              >
+                <div>
+                  <small style={{ color: "#7a8a87", fontSize: 11, fontWeight: 700, textTransform: "uppercase" }}>
+                    Total Gastado este Mes
+                  </small>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: "#0d766e", marginTop: 2 }}>
+                    {currencyFmt.format(monthlyTotalSpent)}
+                  </div>
+                  <span style={{ fontSize: 11, color: "#556e69" }}>
+                    {paidCount} sesiones liquidadas este mes
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="secondary compact"
+                  style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 8, fontWeight: 700 }}
+                  onClick={() => setExportSheetOpen(true)}
+                  aria-label="Exportar comprobantes por cantidad"
+                >
+                  <Icon name="download" size={15} /> Exportar
+                </button>
+              </div>
+
               {/* Estancia en Curso para Pagar */}
               {activeSession && activeSession.status === "active" && (
                 <div
@@ -799,75 +963,134 @@ export function MobileDriverApp({
                 </div>
               )}
 
-              <h4 style={{ margin: "14px 0 0", fontSize: 15 }}>Sesiones Recientes</h4>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {state.history.map((h) => (
-                  <div
-                    key={h.id}
-                    style={{
-                      background: "#ffffff",
-                      borderRadius: 14,
-                      padding: 14,
-                      border: "1px solid #e1e7e5",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                    }}
+              {/* Filtro por Estado (Todos, Pendientes, Pagados) */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14 }}>
+                <h4 style={{ margin: 0, fontSize: 15 }}>Historial de Sesiones</h4>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button
+                    type="button"
+                    className={`badge ${paymentFilter === "todos" ? "active" : "neutral"}`}
+                    onClick={() => setPaymentFilter("todos")}
+                    style={{ cursor: "pointer", padding: "4px 8px", fontSize: 11 }}
                   >
-                    <div>
-                      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                        <span className="plate-small">{h.plate}</span>
-                        <Badge tone={h.status === "paid" ? "paid" : h.status === "active" ? "active" : "pending"}>
-                          {h.status === "paid" ? "Pagado" : h.status === "active" ? "En curso" : "Pendiente"}
-                        </Badge>
-                      </div>
-                      <small style={{ display: "block", color: "#7a8a87", marginTop: 4 }}>
-                        {h.date} · {h.duration}
-                      </small>
-                      <strong style={{ fontSize: 14, color: "#142523", marginTop: 2, display: "block" }}>
-                        {currencyFmt.format(h.total)}
-                      </strong>
-                    </div>
-
-                    {h.status === "pending" ? (
-                      <button className="primary compact" onClick={() => setPayingSession(h)}>
-                        Pagar ahora
-                      </button>
-                    ) : (
-                      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                        {h.qrCode && (
-                          <button
-                            type="button"
-                            className="secondary compact"
-                            title="Descargar tique"
-                            style={{ padding: "6px 8px", display: "inline-flex", alignItems: "center", gap: 4 }}
-                            onClick={() => {
-                              downloadTicket({
-                                id: h.id,
-                                plate: h.plate,
-                                entryTime: h.date,
-                                exitTime: new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" }),
-                                duration: h.duration,
-                                total: h.total,
-                                method: h.method,
-                                qrCode: h.qrCode,
-                              });
-                              showToast(`Descargando tique ${h.plate}...`);
-                            }}
-                            aria-label={`Descargar tique digital de ${h.plate}`}
-                          >
-                            <Icon name="download" size={14} />
-                          </button>
-                        )}
-                        <button className="secondary compact" onClick={() => setPayingSession(h)}>
-                          Ver QR
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                    Todos ({state.history.length})
+                  </button>
+                  <button
+                    type="button"
+                    className={`badge ${paymentFilter === "pendientes" ? "active" : pendingCount > 0 ? "warning" : "neutral"}`}
+                    onClick={() => setPaymentFilter("pendientes")}
+                    style={{ cursor: "pointer", padding: "4px 8px", fontSize: 11 }}
+                  >
+                    Pendientes ({pendingCount})
+                  </button>
+                  <button
+                    type="button"
+                    className={`badge ${paymentFilter === "pagados" ? "active" : "neutral"}`}
+                    onClick={() => setPaymentFilter("pagados")}
+                    style={{ cursor: "pointer", padding: "4px 8px", fontSize: 11 }}
+                  >
+                    Pagados ({paidCount})
+                  </button>
+                </div>
               </div>
+
+              {/* Lista ordenada: Pendientes primero en vista 'Todos' */}
+              {(() => {
+                const filteredHistory = state.history
+                  .filter((h) => {
+                    if (paymentFilter === "pendientes") return h.status === "pending";
+                    if (paymentFilter === "pagados") return h.status === "paid";
+                    return true;
+                  })
+                  .sort((a, b) => {
+                    if (paymentFilter === "todos") {
+                      if (a.status === "pending" && b.status !== "pending") return -1;
+                      if (a.status !== "pending" && b.status === "pending") return 1;
+                    }
+                    return 0;
+                  });
+
+                if (filteredHistory.length === 0) {
+                  return (
+                    <div style={{ textAlign: "center", padding: "28px 14px", background: "#f8faf9", borderRadius: 12, border: "1px dashed #d1dedb", marginTop: 8 }}>
+                      <p style={{ margin: 0, fontSize: 13, color: "#7a8a87" }}>
+                        No hay sesiones registradas en este estado.
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 8 }}>
+                    {filteredHistory.map((h) => (
+                      <div
+                        key={h.id}
+                        style={{
+                          background: "#ffffff",
+                          borderRadius: 14,
+                          padding: 14,
+                          border: h.status === "pending" ? "1.5px solid #f59e0b" : "1px solid #e1e7e5",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          boxShadow: h.status === "pending" ? "0 2px 10px rgba(245, 158, 11, 0.08)" : undefined,
+                        }}
+                      >
+                        <div>
+                          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                            <span className="plate-small">{h.plate}</span>
+                            <Badge tone={h.status === "paid" ? "paid" : h.status === "active" ? "active" : "warning"}>
+                              {h.status === "paid" ? "Pagado" : h.status === "active" ? "En curso" : "Pendiente"}
+                            </Badge>
+                          </div>
+                          <small style={{ display: "block", color: "#7a8a87", marginTop: 4 }}>
+                            {h.date} · {h.duration}
+                          </small>
+                          <strong style={{ fontSize: 14, color: "#142523", marginTop: 2, display: "block" }}>
+                            {currencyFmt.format(h.total)}
+                          </strong>
+                        </div>
+
+                        {h.status === "pending" ? (
+                          <button className="primary compact" onClick={() => setPayingSession(h)}>
+                            Pagar ahora
+                          </button>
+                        ) : (
+                          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                            {h.qrCode && (
+                              <button
+                                type="button"
+                                className="secondary compact"
+                                title="Descargar tique"
+                                style={{ padding: "6px 8px", display: "inline-flex", alignItems: "center", gap: 4 }}
+                                onClick={() => {
+                                  downloadTicket({
+                                    id: h.id,
+                                    plate: h.plate,
+                                    entryTime: h.date,
+                                    exitTime: new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" }),
+                                    duration: h.duration,
+                                    total: h.total,
+                                    method: h.method,
+                                    qrCode: h.qrCode,
+                                  });
+                                  showToast(`Descargando tique ${h.plate}...`);
+                                }}
+                                aria-label={`Descargar tique digital de ${h.plate}`}
+                              >
+                                <Icon name="download" size={14} />
+                              </button>
+                            )}
+                            <button className="secondary compact" onClick={() => setPayingSession(h)}>
+                              Ver QR
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>
@@ -946,8 +1169,16 @@ export function MobileDriverApp({
                   </strong>
                 </div>
                 <div className="mobile-session-metric">
-                  <span>Tipo & Distancia</span>
-                  <strong>{selectedSpot.type === "pmr" ? "PMR Accesible" : selectedSpot.type === "ev" ? "Cargador EV" : "Automóvil"}</strong>
+                  <span>Tipo & Tarifa</span>
+                  <strong>
+                    {selectedSpot.type === "motorcycle"
+                      ? "🏍️ Moto ($35/min)"
+                      : selectedSpot.type === "pmr"
+                      ? "♿ PMR Accesible ($65/min)"
+                      : selectedSpot.type === "ev"
+                      ? "⚡ Cargador EV ($65/min)"
+                      : "🚗 Carro / Camioneta ($65/min)"}
+                  </strong>
                   <small style={{ fontSize: 9 }}>A {selectedSpot.distanceElevator}m del ascensor</small>
                 </div>
               </div>
@@ -965,6 +1196,78 @@ export function MobileDriverApp({
                   Bahía no disponible · Elegir otra
                 </button>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* ════ BOTTOM SHEET: EXPORTAR HISTORIAL DE PAGOS ════ */}
+        {exportSheetOpen && (
+          <div className="bottom-sheet-backdrop" onClick={() => setExportSheetOpen(false)}>
+            <div className="bottom-sheet" onClick={(e) => e.stopPropagation()}>
+              <div className="sheet-handle-bar" />
+              <div className="sheet-header">
+                <h3>Exportar Historial de Pagos</h3>
+                <button className="icon-btn" onClick={() => setExportSheetOpen(false)}>
+                  <Icon name="close" size={16} />
+                </button>
+              </div>
+
+              <p style={{ margin: "0 0 16px 0", fontSize: 13, color: "var(--text-secondary)" }}>
+                Descarga un archivo CSV detallado con tus comprobantes, fechas, duraciones, métodos y montos abonados.
+              </p>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <button
+                  type="button"
+                  className="secondary"
+                  style={{ justifyContent: "flex-start", padding: "12px 16px", borderRadius: 12, display: "flex", alignItems: "center", gap: 12 }}
+                  onClick={() => {
+                    exportHistoryCsv(5);
+                    setExportSheetOpen(false);
+                    showToast("Exportando últimos 5 comprobantes...");
+                  }}
+                >
+                  <Icon name="download" size={18} />
+                  <div style={{ textAlign: "left" }}>
+                    <strong style={{ display: "block", fontSize: 14 }}>Últimos 5 comprobantes</strong>
+                    <small style={{ color: "var(--text-secondary)" }}>Resumen reciente de tus estancias</small>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  className="secondary"
+                  style={{ justifyContent: "flex-start", padding: "12px 16px", borderRadius: 12, display: "flex", alignItems: "center", gap: 12 }}
+                  onClick={() => {
+                    exportHistoryCsv(10);
+                    setExportSheetOpen(false);
+                    showToast("Exportando últimos 10 comprobantes...");
+                  }}
+                >
+                  <Icon name="download" size={18} />
+                  <div style={{ textAlign: "left" }}>
+                    <strong style={{ display: "block", fontSize: 14 }}>Últimos 10 comprobantes</strong>
+                    <small style={{ color: "var(--text-secondary)" }}>Historial extendido de movimientos</small>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  className="primary"
+                  style={{ justifyContent: "flex-start", padding: "12px 16px", borderRadius: 12, display: "flex", alignItems: "center", gap: 12 }}
+                  onClick={() => {
+                    exportHistoryCsv();
+                    setExportSheetOpen(false);
+                    showToast(`Exportando historial completo (${state.history.length} registros)...`);
+                  }}
+                >
+                  <Icon name="download" size={18} />
+                  <div style={{ textAlign: "left" }}>
+                    <strong style={{ display: "block", fontSize: 14 }}>Todo el historial ({state.history.length})</strong>
+                    <small style={{ opacity: 0.9 }}>Todos los registros de estancias y pagos</small>
+                  </div>
+                </button>
+              </div>
             </div>
           </div>
         )}

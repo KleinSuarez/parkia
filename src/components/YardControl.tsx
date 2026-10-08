@@ -114,12 +114,14 @@ export function YardControl({ onGoToCashier }: { onGoToCashier?: (plate: string)
       <div style={{ display: "flex", gap: 8, marginBottom: 18, flexWrap: "wrap" }}>
         {[
           { id: "all", label: "Todas las bahías" },
+          { id: "car", label: "🚗 Carros" },
+          { id: "motorcycle", label: "🏍️ Motos" },
           { id: "free", label: "Libres (Verde)" },
           { id: "occupied", label: "Ocupadas (Rojo)" },
           { id: "reserved", label: "Reservadas (Ámbar)" },
           { id: "maintenance", label: "En Mantenimiento (Gris)" },
-          { id: "pmr", label: "Bahías PMR Accesibles" },
-          { id: "ev", label: "Bahías Eléctricas (EV)" },
+          { id: "pmr", label: "Bahías PMR" },
+          { id: "ev", label: "Bahías EV" },
         ].map((f) => (
           <button
             key={f.id}
@@ -190,10 +192,22 @@ export function YardControl({ onGoToCashier }: { onGoToCashier?: (plate: string)
                 <span style={{ fontSize: 13, fontWeight: 800, color: "#111827" }}>{spot.id}</span>
                 {spot.type === "pmr" && <Badge tone="info">PMR</Badge>}
                 {spot.type === "ev" && <Badge tone="green">EV</Badge>}
+                {spot.type === "motorcycle" && <Badge tone="purple">MOTO</Badge>}
               </div>
 
               <div style={{ margin: "6px 0", color: borderColor }}>
-                <Icon name={spot.state === "occupied" ? "car" : spot.state === "maintenance" ? "alert" : "check"} size={26} />
+                <Icon
+                  name={
+                    spot.type === "motorcycle"
+                      ? "motorcycle"
+                      : spot.state === "occupied"
+                      ? "car"
+                      : spot.state === "maintenance"
+                      ? "alert"
+                      : "check"
+                  }
+                  size={26}
+                />
               </div>
 
               <div style={{ textAlign: "center", width: "100%" }}>
@@ -241,7 +255,15 @@ export function YardControl({ onGoToCashier }: { onGoToCashier?: (plate: string)
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                 <span style={{ color: "#6b7280" }}>Tipo de celda:</span>
-                <span>{selectedSpot.type === "pmr" ? "PMR Accesible" : selectedSpot.type === "ev" ? "Eléctrico (EV)" : "Automóvil Estándar"}</span>
+                <span>
+                  {selectedSpot.type === "motorcycle"
+                    ? "🏍️ Bahía de Motocicleta ($35/min)"
+                    : selectedSpot.type === "pmr"
+                    ? "♿ PMR Accesible ($65/min)"
+                    : selectedSpot.type === "ev"
+                    ? "⚡ Eléctrico (EV) ($65/min)"
+                    : "🚗 Automóvil Estándar ($65/min)"}
+                </span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                 <span style={{ color: "#6b7280" }}>Distancia a ascensor:</span>
