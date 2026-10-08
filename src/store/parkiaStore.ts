@@ -294,6 +294,18 @@ const defaultState: ParkiaState = {
       rfidLinked: true,
       lastEntry: "3 jun, 14:15 p. m.",
     },
+    {
+      id: "v3",
+      plate: "MOT · 42D",
+      brand: "Yamaha",
+      model: "MT-03",
+      year: "2024",
+      color: "Azul Racing",
+      type: "Motocicleta",
+      isPrimary: false,
+      rfidLinked: true,
+      lastEntry: "Ayer, 18:20 p. m.",
+    },
   ],
   history: [
     {
@@ -656,12 +668,14 @@ function loadState(): ParkiaState {
     if (!raw) return defaultState;
     const parsed = JSON.parse(raw);
     const hasMotorcycleSpots = parsed.spots && parsed.spots.some((s: ParkingSpot) => s.type === "motorcycle");
+    const hasMotorcycleVeh = parsed.vehicles && parsed.vehicles.some((v: any) => v.type === "Motocicleta");
     const isOldMockSession = parsed.activeSession && (parsed.activeSession.elapsedMinutes === 138 || parsed.activeSession.plate === "JHT · 482" && parsed.activeSession.status === "active" && !parsed.activeSession.entryTimestamp);
 
     return {
       ...defaultState,
       ...parsed,
       spots: hasMotorcycleSpots ? parsed.spots : defaultState.spots,
+      vehicles: hasMotorcycleVeh ? parsed.vehicles : defaultState.vehicles,
       activeSession: isOldMockSession ? null : (parsed.activeSession ?? null),
       shift: { ...defaultState.shift, ...(parsed.shift || {}) },
       parkedVehicles:
@@ -847,8 +861,30 @@ export const parkiaActions = {
     emitChange();
   },
 
-  // Flujo U1: Reservar bahía
+  // Flujo U1: Reservar bahía con validación de compatibilidad vehicular
   reserveSpot(spotId: string, floor: "Piso 1" | "Piso 2" | "Piso 3", vehiclePlate?: string) {
+    const targetSpot = currentState.spots.find((s) => s.id === spotId && s.floor === floor);
+    if (!targetSpot) {
+      return { success: false, reason: "Bahía no encontrada" };
+    }
+
+    const primaryVeh = currentState.vehicles.find((v) => vehiclePlate ? v.plate === vehiclePlate : v.isPrimary) || currentState.vehicles[0];
+    const isSpotMoto = targetSpot.type === "motorcycle";
+    const isVehMoto = primaryVeh?.type === "Motocicleta";
+
+    if (isSpotMoto && !isVehMoto) {
+      return {
+        success: false,
+        reason: `Tu vehículo activo es un ${primaryVeh?.type || "Automóvil"} (${primaryVeh?.plate}). Esta bahía es exclusiva para motocicletas.`,
+      };
+    }
+    if (!isSpotMoto && isVehMoto) {
+      return {
+        success: false,
+        reason: `Tu vehículo activo es una Motocicleta (${primaryVeh?.plate}). Esta bahía está reservada para automóviles.`,
+      };
+    }
+
     const updatedSpots = currentState.spots.map((s) => {
       if (s.id === spotId && s.floor === floor) {
         return { ...s, state: "reserved" as SpotState };
@@ -856,12 +892,10 @@ export const parkiaActions = {
       return s;
     });
 
-    const targetSpot = currentState.spots.find((s) => s.id === spotId && s.floor === floor);
-    const primaryVeh = currentState.vehicles.find((v) => v.isPrimary) || currentState.vehicles[0];
     const plate = vehiclePlate || (primaryVeh ? primaryVeh.plate : "JHT · 482");
     const vName = primaryVeh ? `${primaryVeh.brand} ${primaryVeh.model}` : "Vehículo Principal";
-    const vType = targetSpot?.type === "motorcycle" ? "motorcycle" : targetSpot?.type === "ev" ? "ev" : "car";
-    const rate = targetSpot?.type === "motorcycle" ? 35 : currentState.tariffs.carRate;
+    const vType = targetSpot.type === "motorcycle" ? "motorcycle" : targetSpot.type === "ev" ? "ev" : "car";
+    const rate = targetSpot.type === "motorcycle" ? 35 : currentState.tariffs.carRate;
 
     const now = new Date();
     const entryTime = now.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
@@ -882,6 +916,7 @@ export const parkiaActions = {
       },
     };
     emitChange();
+    return { success: true, spot: targetSpot };
   },
 
   // Flujo U1: Ocupar bahía directamente

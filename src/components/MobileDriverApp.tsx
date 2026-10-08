@@ -102,7 +102,28 @@ export function MobileDriverApp({
 
   function handleReserveSpot() {
     if (!selectedSpot) return;
-    actions.reserveSpot(selectedSpot.id, mapFloor);
+    const isSpotMoto = selectedSpot.type === "motorcycle";
+    const isVehMoto = primaryVehicle?.type === "Motocicleta";
+
+    if (isSpotMoto && !isVehMoto) {
+      showToast(
+        `⚠️ Incompatible: Tu vehículo activo es un ${primaryVehicle?.type || "Automóvil"} (${primaryVehicle?.plate}). Esta bahía es exclusiva para motos.`
+      );
+      return;
+    }
+    if (!isSpotMoto && isVehMoto) {
+      showToast(
+        `⚠️ Incompatible: Tu vehículo activo es una Motocicleta (${primaryVehicle?.plate}). Esta bahía es exclusiva para carros.`
+      );
+      return;
+    }
+
+    const res = actions.reserveSpot(selectedSpot.id, mapFloor, primaryVehicle?.plate);
+    if (res && !res.success) {
+      showToast(`⚠️ ${res.reason}`);
+      return;
+    }
+
     showToast(`¡Bahía ${selectedSpot.id} reservada! Sesión iniciada para tu vehículo.`);
     setSelectedSpot(null);
   }
@@ -1150,55 +1171,122 @@ export function MobileDriverApp({
         </div>
 
         {/* ════ BOTTOM SHEET: DETALLE Y RESERVA DE BAHÍA ════ */}
-        {selectedSpot && (
-          <div className="bottom-sheet-backdrop" onClick={() => setSelectedSpot(null)}>
-            <div className="bottom-sheet" onClick={(e) => e.stopPropagation()}>
-              <div className="sheet-handle-bar" />
-              <div className="sheet-header">
-                <h3>Bahía {selectedSpot.id} ({selectedSpot.floor})</h3>
-                <button className="icon-btn" onClick={() => setSelectedSpot(null)}>
-                  <Icon name="close" size={16} />
-                </button>
-              </div>
+        {selectedSpot && (() => {
+          const isSpotMoto = selectedSpot.type === "motorcycle";
+          const isVehMoto = primaryVehicle?.type === "Motocicleta";
+          const isCompatible = (isSpotMoto && isVehMoto) || (!isSpotMoto && !isVehMoto);
 
-              <div className="mobile-session-metrics">
-                <div className="mobile-session-metric">
-                  <span>Estado actual</span>
-                  <strong style={{ color: selectedSpot.state === "free" ? "#0d766e" : "#b83e37" }}>
-                    {selectedSpot.state === "free" ? "Libre para reservar" : selectedSpot.state === "reserved" ? "Reservado" : "Ocupado"}
-                  </strong>
+          return (
+            <div className="bottom-sheet-backdrop" onClick={() => setSelectedSpot(null)}>
+              <div className="bottom-sheet" onClick={(e) => e.stopPropagation()}>
+                <div className="sheet-handle-bar" />
+                <div className="sheet-header">
+                  <h3>Bahía {selectedSpot.id} ({selectedSpot.floor})</h3>
+                  <button className="icon-btn" onClick={() => setSelectedSpot(null)}>
+                    <Icon name="close" size={16} />
+                  </button>
                 </div>
-                <div className="mobile-session-metric">
-                  <span>Tipo & Tarifa</span>
-                  <strong>
-                    {selectedSpot.type === "motorcycle"
-                      ? "🏍️ Moto ($35/min)"
-                      : selectedSpot.type === "pmr"
-                      ? "♿ PMR Accesible ($65/min)"
-                      : selectedSpot.type === "ev"
-                      ? "⚡ Cargador EV ($65/min)"
-                      : "🚗 Carro / Camioneta ($65/min)"}
-                  </strong>
-                  <small style={{ fontSize: 9 }}>A {selectedSpot.distanceElevator}m del ascensor</small>
-                </div>
-              </div>
 
-              {selectedSpot.state === "free" ? (
-                <button type="button" className="primary sheet-cta-btn" onClick={handleReserveSpot}>
-                  <Icon name="check" size={18} /> Reservar bahía ahora (15 min)
-                </button>
-              ) : selectedSpot.state === "reserved" ? (
-                <button type="button" className="primary sheet-cta-btn danger" onClick={handleReleaseSpot}>
-                  <Icon name="close" size={18} /> Cancelar reserva
-                </button>
-              ) : (
-                <button type="button" className="secondary sheet-cta-btn" onClick={() => setSelectedSpot(null)}>
-                  Bahía no disponible · Elegir otra
-                </button>
-              )}
+                <div className="mobile-session-metrics">
+                  <div className="mobile-session-metric">
+                    <span>Estado actual</span>
+                    <strong style={{ color: selectedSpot.state === "free" ? "#0d766e" : "#b83e37" }}>
+                      {selectedSpot.state === "free" ? "Libre para reservar" : selectedSpot.state === "reserved" ? "Reservado" : "Ocupado"}
+                    </strong>
+                  </div>
+                  <div className="mobile-session-metric">
+                    <span>Tipo & Tarifa</span>
+                    <strong>
+                      {selectedSpot.type === "motorcycle"
+                        ? "🏍️ Moto ($35/min)"
+                        : selectedSpot.type === "pmr"
+                        ? "♿ PMR Accesible ($65/min)"
+                        : selectedSpot.type === "ev"
+                        ? "⚡ Cargador EV ($65/min)"
+                        : "🚗 Carro / Camioneta ($65/min)"}
+                    </strong>
+                    <small style={{ fontSize: 9 }}>A {selectedSpot.distanceElevator}m del ascensor</small>
+                  </div>
+                </div>
+
+                {/* Banner de incompatibilidad si el tipo no coincide */}
+                {selectedSpot.state === "free" && !isCompatible && (
+                  <div
+                    style={{
+                      background: "#fffbeb",
+                      border: "1.5px solid #f59e0b",
+                      borderRadius: 12,
+                      padding: "10px 14px",
+                      marginBottom: 14,
+                      display: "flex",
+                      gap: 10,
+                      alignItems: "flex-start",
+                    }}
+                  >
+                    <span style={{ color: "#d97706", marginTop: 2 }}>
+                      <Icon name="alert" size={18} />
+                    </span>
+                    <div style={{ flex: 1, fontSize: 12, color: "#92400e" }}>
+                      <strong>Vehículo activo no compatible:</strong>
+                      <p style={{ margin: "2px 0 6px 0", lineHeight: 1.4 }}>
+                        {isVehMoto
+                          ? `Tu vehículo activo es una Moto (${primaryVehicle?.plate}). Esta bahía es exclusiva para Automóviles.`
+                          : `Tu vehículo activo es un Automóvil (${primaryVehicle?.plate}). Esta bahía es exclusiva para Motocicletas.`}
+                      </p>
+                      <button
+                        type="button"
+                        style={{
+                          background: "#fef3c7",
+                          border: "1px solid #d97706",
+                          color: "#92400e",
+                          borderRadius: 8,
+                          padding: "5px 10px",
+                          fontSize: 11,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                        onClick={() => {
+                          setSelectedSpot(null);
+                          setVehicleSelectorSheet(true);
+                        }}
+                      >
+                        <Icon name="refresh" size={13} /> Cambiar vehículo activo ({isSpotMoto ? "Seleccionar moto" : "Seleccionar carro"})
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {selectedSpot.state === "free" ? (
+                  isCompatible ? (
+                    <button type="button" className="primary sheet-cta-btn" onClick={handleReserveSpot}>
+                      <Icon name="check" size={18} /> Reservar bahía ahora (15 min)
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="primary sheet-cta-btn"
+                      style={{ background: "#94a3b8", cursor: "not-allowed" }}
+                      onClick={handleReserveSpot}
+                    >
+                      <Icon name="alert" size={18} /> Bahía no permitida para tu {isVehMoto ? "Moto" : "Carro"}
+                    </button>
+                  )
+                ) : selectedSpot.state === "reserved" ? (
+                  <button type="button" className="primary sheet-cta-btn danger" onClick={handleReleaseSpot}>
+                    <Icon name="close" size={18} /> Cancelar reserva
+                  </button>
+                ) : (
+                  <button type="button" className="secondary sheet-cta-btn" onClick={() => setSelectedSpot(null)}>
+                    Bahía no disponible · Elegir otra
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* ════ BOTTOM SHEET: EXPORTAR HISTORIAL DE PAGOS ════ */}
         {exportSheetOpen && (
