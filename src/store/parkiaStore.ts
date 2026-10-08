@@ -207,7 +207,7 @@ function generateInitialSpots(): ParkingSpot[] {
   const list: ParkingSpot[] = [];
 
   floors.forEach((fl) => {
-    // 16 bahías por piso: A-01..A-08, B-01..B-08
+    // 16 bahías por piso: A-01..A-08 (Zona A), B-01..B-08 (Zona B)
     for (let i = 1; i <= 8; i++) {
       const idA = `A-0${i}`;
       let stateA: SpotState = "free";
@@ -235,23 +235,28 @@ function generateInitialSpots(): ParkingSpot[] {
       const idB = `B-0${i}`;
       let stateB: SpotState = "free";
       let typeB: SpotType = "car";
+      // B-05 a B-08 son bahías dedicadas para motocicletas
+      if (i >= 5 && i <= 8) {
+        typeB = "motorcycle";
+      }
       if (fl === "Piso 2") {
-        if (i === 1 || i === 4 || i === 8) stateB = "occupied";
+        if (i === 1 || i === 4) stateB = "occupied";
         if (i === 5) stateB = "reserved";
-        if (i === 7) typeB = "pmr";
+        if (i === 3) typeB = "pmr";
       } else if (fl === "Piso 1") {
-        if (i <= 5) stateB = "occupied";
+        if (i <= 4) stateB = "occupied";
+        if (i === 6) stateB = "occupied";
       } else {
         if (i % 3 === 0) stateB = "occupied";
       }
       list.push({
         id: idB,
         floor: fl,
-        zone: "Zona B",
+        zone: typeB === "motorcycle" ? "Zona B (Motos)" : "Zona B",
         state: stateB,
         type: typeB,
         distanceElevator: 35 + i * 5,
-        hasCharger: i === 6,
+        hasCharger: i === 4 && typeB === "car",
       });
     }
   });
@@ -263,17 +268,7 @@ function generateInitialSpots(): ParkingSpot[] {
 const defaultState: ParkiaState = {
   currentUser: null,
   spots: generateInitialSpots(),
-  activeSession: {
-    plate: "JHT · 482",
-    vehicle: "Chevrolet Tracker · Gris grafito",
-    vehicleType: "car",
-    entryTime: "08:42 a. m.",
-    entryTimestamp: Date.now() - 138 * 60 * 1000, // Hace 138 minutos
-    accessGate: "Acceso Norte",
-    elapsedMinutes: 138,
-    totalCost: 8970, // 138 min * $65
-    status: "active",
-  },
+  activeSession: null,
   vehicles: [
     {
       id: "v1",
@@ -303,13 +298,13 @@ const defaultState: ParkiaState = {
   history: [
     {
       id: "SES-93842",
-      date: "Hoy, 12 jun",
+      date: "Hoy, 10:30 a. m.",
       plate: "JHT · 482",
-      duration: "En curso",
-      durationMinutes: 138,
-      status: "active",
+      duration: "1 h 15 min",
+      durationMinutes: 75,
+      status: "pending",
       total: 8970,
-      method: "En curso",
+      method: "Pendiente de pago",
     },
     {
       id: "SES-93841",
@@ -335,13 +330,24 @@ const defaultState: ParkiaState = {
     },
     {
       id: "SES-93839",
-      date: "29 may, 2025",
+      date: "1 jun, 2025",
       plate: "JHT · 482",
-      duration: "4 h 06 min",
-      durationMinutes: 246,
+      duration: "2 h 10 min",
+      durationMinutes: 130,
       status: "pending",
-      total: 16800,
+      total: 8450,
       method: "Pendiente de cobro",
+    },
+    {
+      id: "SES-93838",
+      date: "28 may, 2025",
+      plate: "JHT · 482",
+      duration: "3 h 20 min",
+      durationMinutes: 200,
+      status: "paid",
+      total: 13000,
+      method: "PSE Bancolombia",
+      qrCode: "QR-PARKIA-93838-EXIT",
     },
   ],
   gates: [
@@ -649,9 +655,14 @@ function loadState(): ParkiaState {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return defaultState;
     const parsed = JSON.parse(raw);
+    const hasMotorcycleSpots = parsed.spots && parsed.spots.some((s: ParkingSpot) => s.type === "motorcycle");
+    const isOldMockSession = parsed.activeSession && (parsed.activeSession.elapsedMinutes === 138 || parsed.activeSession.plate === "JHT · 482" && parsed.activeSession.status === "active" && !parsed.activeSession.entryTimestamp);
+
     return {
       ...defaultState,
       ...parsed,
+      spots: hasMotorcycleSpots ? parsed.spots : defaultState.spots,
+      activeSession: isOldMockSession ? null : (parsed.activeSession ?? null),
       shift: { ...defaultState.shift, ...(parsed.shift || {}) },
       parkedVehicles:
         parsed.parkedVehicles && parsed.parkedVehicles.length > 0
@@ -837,7 +848,7 @@ export const parkiaActions = {
   },
 
   // Flujo U1: Reservar bahía
-  reserveSpot(spotId: string, floor: "Piso 1" | "Piso 2" | "Piso 3") {
+  reserveSpot(spotId: string, floor: "Piso 1" | "Piso 2" | "Piso 3", vehiclePlate?: string) {
     const updatedSpots = currentState.spots.map((s) => {
       if (s.id === spotId && s.floor === floor) {
         return { ...s, state: "reserved" as SpotState };
@@ -845,9 +856,67 @@ export const parkiaActions = {
       return s;
     });
 
+    const targetSpot = currentState.spots.find((s) => s.id === spotId && s.floor === floor);
+    const primaryVeh = currentState.vehicles.find((v) => v.isPrimary) || currentState.vehicles[0];
+    const plate = vehiclePlate || (primaryVeh ? primaryVeh.plate : "JHT · 482");
+    const vName = primaryVeh ? `${primaryVeh.brand} ${primaryVeh.model}` : "Vehículo Principal";
+    const vType = targetSpot?.type === "motorcycle" ? "motorcycle" : targetSpot?.type === "ev" ? "ev" : "car";
+    const rate = targetSpot?.type === "motorcycle" ? 35 : currentState.tariffs.carRate;
+
+    const now = new Date();
+    const entryTime = now.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+
     currentState = {
       ...currentState,
       spots: updatedSpots,
+      activeSession: {
+        plate,
+        vehicle: vName,
+        vehicleType: vType,
+        entryTime,
+        entryTimestamp: Date.now(),
+        accessGate: floor === "Piso 1" ? "Entrada Norte" : "Entrada Sur",
+        elapsedMinutes: 1,
+        totalCost: rate,
+        status: "active",
+      },
+    };
+    emitChange();
+  },
+
+  // Flujo U1: Ocupar bahía directamente
+  occupySpot(spotId: string, floor: "Piso 1" | "Piso 2" | "Piso 3", vehiclePlate?: string) {
+    const updatedSpots = currentState.spots.map((s) => {
+      if (s.id === spotId && s.floor === floor) {
+        return { ...s, state: "occupied" as SpotState };
+      }
+      return s;
+    });
+
+    const targetSpot = currentState.spots.find((s) => s.id === spotId && s.floor === floor);
+    const primaryVeh = currentState.vehicles.find((v) => v.isPrimary) || currentState.vehicles[0];
+    const plate = vehiclePlate || (primaryVeh ? primaryVeh.plate : "JHT · 482");
+    const vName = primaryVeh ? `${primaryVeh.brand} ${primaryVeh.model}` : "Vehículo Principal";
+    const vType = targetSpot?.type === "motorcycle" ? "motorcycle" : targetSpot?.type === "ev" ? "ev" : "car";
+    const rate = targetSpot?.type === "motorcycle" ? 35 : currentState.tariffs.carRate;
+
+    const now = new Date();
+    const entryTime = now.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+
+    currentState = {
+      ...currentState,
+      spots: updatedSpots,
+      activeSession: {
+        plate,
+        vehicle: vName,
+        vehicleType: vType,
+        entryTime,
+        entryTimestamp: Date.now(),
+        accessGate: floor === "Piso 1" ? "Entrada Norte" : "Entrada Sur",
+        elapsedMinutes: 1,
+        totalCost: rate,
+        status: "active",
+      },
     };
     emitChange();
   },
@@ -864,6 +933,7 @@ export const parkiaActions = {
     currentState = {
       ...currentState,
       spots: updatedSpots,
+      activeSession: null,
     };
     emitChange();
   },

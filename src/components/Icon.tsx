@@ -1,7 +1,7 @@
 import React from "react";
 
 export type IconName =
-  | "home" | "map" | "car" | "clock" | "grid" | "gate" | "report"
+  | "home" | "map" | "car" | "motorcycle" | "clock" | "grid" | "gate" | "report"
   | "settings" | "bell" | "search" | "arrow" | "check" | "close"
   | "calendar" | "card" | "user" | "alert" | "download" | "plus"
   | "chevron" | "logout" | "filter" | "more" | "shield" | "edit"
@@ -11,6 +11,7 @@ const paths: Record<IconName, React.ReactNode> = {
   home: <><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10M9 20v-6h6v6"/></>,
   map: <><path d="m3 6 5-3 8 3 5-3v15l-5 3-8-3-5 3V6Z"/><path d="M8 3v15M16 6v15"/></>,
   car: <><path d="m5 11 1.5-4.5h11L19 11"/><path d="M3 11h18v7H3zM6 18v2M18 18v2M7 14h.01M17 14h.01"/></>,
+  motorcycle: <><circle cx="5" cy="16" r="3"/><circle cx="19" cy="16" r="3"/><path d="M12 16h4l2-6H9l-2 3M14 6l-2 4M9 10l-4 6M10 6h4"/></>,
   clock: <><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>,
   grid: <><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></>,
   gate: <><path d="M4 21V8M20 21V8M2 8h20M7 8V4h10v4M6 13h12M6 17h12"/></>,
